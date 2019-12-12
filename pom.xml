@@ -26,7 +26,7 @@ under the License.
 	<version>0.1</version>
 	<packaging>jar</packaging>
 
-	<name>Flink Quickstart Job</name>
+	<name>Flink Tutorials</name>
 	<url>http://www.myorganization.org</url>
 
 	<repositories>
@@ -58,6 +58,11 @@ under the License.
 			<artifactId>flink-scala_${scala.binary.version}</artifactId>
 			<version>${flink.version}</version>
 			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-connector-wikiedits_${scala.binary.version}</artifactId>
+			<version>${flink.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
@@ -118,12 +123,9 @@ under the License.
 						</goals>
 						<configuration>
 							<artifactSet>
-								<excludes>
-									<exclude>org.apache.flink:force-shading</exclude>
-									<exclude>com.google.code.findbugs:jsr305</exclude>
-									<exclude>org.slf4j:*</exclude>
-									<exclude>log4j:*</exclude>
-								</excludes>
+								<includes>
+									<include>org.apache.flink:flink-connector-wikiedits_2.11</include>
+								</includes>
 							</artifactSet>
 							<filters>
 								<filter>
@@ -139,7 +141,7 @@ under the License.
 							</filters>
 							<transformers>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									<mainClass>quickstart.StreamingJob</mainClass>
+									<mainClass>com.flink.tutorials.demos.stock.StockPriceDemo</mainClass>
 								</transformer>
 							</transformers>
 						</configuration>
@@ -267,6 +269,12 @@ under the License.
 					<groupId>org.scala-lang</groupId>
 					<artifactId>scala-library</artifactId>
 					<version>${scala.version}</version>
+					<scope>compile</scope>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.flink</groupId>
+					<artifactId>flink-connector-wikiedits_${scala.binary.version}</artifactId>
+					<version>${flink.version}</version>
 					<scope>compile</scope>
 				</dependency>
 			</dependencies>
