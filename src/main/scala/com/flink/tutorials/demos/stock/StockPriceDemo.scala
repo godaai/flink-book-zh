@@ -73,7 +73,7 @@ object StockPriceDemo {
         val curTime = Calendar.getInstance.getTimeInMillis
 
         // 将数据源收集写入SourceContext
-        srcCtx.collect(StockPrice("symbol_" + stockId.toString, curTime, curPrice))
+        srcCtx.collect(StockPrice(stockId.toString, curTime, curPrice))
         Thread.sleep(rand.nextInt(10))
       }
     }
