@@ -1,4 +1,4 @@
-package com.flink.tutorials.demos.wikiedits
+package com.flink.tutorials.scala.demos.wikiedits
 
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.windowing.time.Time

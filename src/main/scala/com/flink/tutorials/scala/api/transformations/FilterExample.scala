@@ -1,4 +1,4 @@
-package com.flink.tutorials.api.transformations
+package com.flink.tutorials.scala.api.transformations
 
 import org.apache.flink.api.common.functions.RichFilterFunction
 import org.apache.flink.streaming.api.scala._

@@ -1,8 +1,8 @@
-package com.flink.tutorials.demos.stock
+package com.flink.tutorials.scala.demos.stock
 
 import java.util.Calendar
 
-import com.flink.tutorials.demos.stock.StockPriceDemo.{StockPrice, StockPriceSource, StockPriceTimeAssigner}
+import StockPriceDemo.{StockPrice, StockPriceSource, StockPriceTimeAssigner}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction

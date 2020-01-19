@@ -1,4 +1,4 @@
-package com.flink.tutorials.demos.stock
+package com.flink.tutorials.scala.demos.stock
 
 import java.util.Calendar
 
