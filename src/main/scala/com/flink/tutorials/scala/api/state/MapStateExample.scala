@@ -14,6 +14,33 @@ import org.apache.flink.util.Collector
 
 object MapStateExample {
 
+  def main(args: Array[String]): Unit = {
+
+    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    env.setParallelism(8)
+
+    // 获取数据源
+    val sourceStream: DataStream[UserBehavior] = env
+      .addSource(new UserBehaviorSource("state/UserBehavior-20171201.csv")).assignTimestampsAndWatermarks(new AscendingTimestampExtractor[UserBehavior]() {
+      override def extractAscendingTimestamp(userBehavior: UserBehavior): Long = {
+        // 原始数据单位为秒，乘以1000转换成毫秒
+        userBehavior.timestamp * 1000
+      }
+    }
+    )
+
+    // 生成一个KeyedStream
+    val keyedStream =  sourceStream.keyBy(user => user.userId)
+
+    // 在KeyedStream上进行flatMap
+    val behaviorCountStream = keyedStream.flatMap(new MapStateFunction)
+
+    behaviorCountStream.print()
+
+    env.execute("state example")
+  }
+
   /**
     * 用户行为
     * categoryId为商品类目ID
@@ -48,33 +75,6 @@ object MapStateExample {
       behaviorMapState.put(input.behavior, behaviorCnt)
       collector.collect((input.userId, input.behavior, behaviorCnt))
     }
-  }
-
-  def main(args: Array[String]): Unit = {
-
-    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    env.setParallelism(8)
-
-    // 获取数据源
-    val sourceStream: DataStream[UserBehavior] = env
-      .addSource(new UserBehaviorSource("state/UserBehavior-50.csv")).assignTimestampsAndWatermarks(new AscendingTimestampExtractor[UserBehavior]() {
-          override def extractAscendingTimestamp(userBehavior: UserBehavior): Long = {
-            // 原始数据单位为秒，乘以1000转换成毫秒
-            userBehavior.timestamp * 1000
-          }
-        }
-      )
-
-    // 生成一个KeyedStream
-    val keyedStream =  sourceStream.keyBy(user => user.userId)
-
-    // 在KeyedStream上进行flatMap
-    val behaviorCountStream = keyedStream.flatMap(new MapStateFunction)
-
-    behaviorCountStream.print()
-
-    env.execute("state example")
   }
 
   class UserBehaviorSource(path: String) extends RichSourceFunction[UserBehavior] {
