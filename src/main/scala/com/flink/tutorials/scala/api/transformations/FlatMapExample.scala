@@ -1,5 +1,6 @@
 package com.flink.tutorials.scala.api.transformations
 
+import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.api.common.accumulators.IntCounter
 import org.apache.flink.api.common.functions.{FlatMapFunction, RichFlatMapFunction}
 import org.apache.flink.configuration.Configuration
@@ -10,6 +11,7 @@ import org.apache.flink.util.Collector
 object FlatMapExample {
 
   def main(args: Array[String]): Unit = {
+
     // 创建 Flink 执行环境
     val senv: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
 
@@ -18,12 +20,12 @@ object FlatMapExample {
     // split函数的输入为 "Hello World" 输出为 "Hello" 和 "World" 组成的列表 ["Hello", "World"]
     // flatMap将列表中每个元素提取出来
     // 最后输出为 ["Hello", "World", "Hello", "this", "is", "Flink"]
-    val words = dataStream.flatMap ( input => input.split(" ") )
+    val words: DataStream[String] = dataStream.flatMap ( input => input.split(" ") )
 
-    val words2 = dataStream.map { _.split(" ") }
+    val words2: DataStream[String] = dataStream.flatMap{ _.split(" ") }
 
     // 只对字符串数量大于15的句子进行处理
-    val longSentenceWords = dataStream.flatMap {
+    val longSentenceWords: DataStream[String] = dataStream.flatMap {
       input => {
         if (input.size > 15) {
           // 输出是 TraversableOnce 因此返回必须是一个列表
@@ -36,7 +38,7 @@ object FlatMapExample {
       }
     }
 
-    val flatMapWith = dataStream.flatMapWith {
+    val flatMapWithStream: DataStream[String] = dataStream.flatMapWith {
       case (sentence: String) => {
         if (sentence.size > 15) {
           sentence.split(" ").toSeq
@@ -46,11 +48,9 @@ object FlatMapExample {
       }
     }
 
+    val functionStream: DataStream[String] = dataStream.flatMap(new WordSplitFlatMap(10))
 
-
-    val function = dataStream.flatMap(new WordSplitFlatMap(10))
-
-    val lambda = dataStream.flatMap{
+    val lambda: DataStream[String] = dataStream.flatMap{
       (value: String, out: Collector[String]) => {
         if (value.size > 10) {
           value.split(" ").foreach(out.collect)
@@ -58,9 +58,9 @@ object FlatMapExample {
       }
     }
 
-    val richFunction = dataStream.flatMap(new WordSplitRichFlatMap(10))
+    val richFunctionStream: DataStream[String] = dataStream.flatMap(new WordSplitRichFlatMap(10))
 
-    val jobExecuteResult = senv.execute("basic flatMap transformation")
+    val jobExecuteResult: JobExecutionResult = senv.execute("basic flatMap transformation")
 
     // 执行结束后 获取累加器的结果
     val lines: Int = jobExecuteResult.getAccumulatorResult("num-of-lines")

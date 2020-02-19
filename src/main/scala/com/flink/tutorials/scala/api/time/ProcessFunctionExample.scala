@@ -31,7 +31,7 @@ object ProcessFunctionExample {
 
     // 读入数据流
     val inputStream: DataStream[StockPrice] = env
-      .addSource(new StockSource("time/us-stock-tick-20200108.csv"))
+      .addSource(new StockSource("stock/stock-tick-20200108.csv"))
       .assignTimestampsAndWatermarks(new AscendingTimestampExtractor[StockPrice]() {
         override def extractAscendingTimestamp(stock: StockPrice): Long = {
           stock.ts
@@ -107,7 +107,7 @@ object ProcessFunctionExample {
 
       val formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
 
-      out.collect("time: " + formatter.format(ts) + ", symbol: '" + ctx.getCurrentKey +
+      out.collect("stock: " + formatter.format(ts) + ", symbol: '" + ctx.getCurrentKey +
         " monotonically increased for " + intervalMills + " millisecond.")
       // 清空currentTimer状态
       currentTimer.clear()

@@ -6,6 +6,7 @@ import org.apache.flink.streaming.api.scala._
 object MapExample {
 
   def main(args: Array[String]): Unit = {
+
     // 创建 Flink 执行环境
     val senv: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
 

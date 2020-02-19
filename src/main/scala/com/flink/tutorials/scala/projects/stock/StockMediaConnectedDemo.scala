@@ -1,8 +1,9 @@
-package com.flink.tutorials.scala.demos.stock
+package com.flink.tutorials.scala.projects.stock
 
 import java.util.Calendar
 
-import StockPriceDemo.{StockPrice, StockPriceSource, StockPriceTimeAssigner}
+import com.flink.tutorials.scala.projects.stock.StockPriceDemo.StockPriceTimeAssigner
+import com.flink.tutorials.scala.utils.stock.{StockPrice, StockSource}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction
@@ -12,6 +13,8 @@ import org.apache.flink.streaming.api.scala._
 import org.apache.flink.util.Collector
 
 import scala.util.Random
+
+/*
 
 object StockMediaConnectedDemo {
 
@@ -27,7 +30,7 @@ object StockMediaConnectedDemo {
     // 股票价格数据流
     val stockPriceRawStream: DataStream[StockPrice] = env
       // 该数据流由StockPriceSource类随机生成
-      .addSource(new StockPriceSource)
+      .addSource(new StockSource("stock/stock-tick-20200108.csv"))
       // 设置 Timestamp 和 Watermark
       .assignTimestampsAndWatermarks(new StockPriceTimeAssigner)
 
@@ -103,7 +106,7 @@ object StockMediaConnectedDemo {
     override def flatMap1(stock: StockPrice, collector: Collector[Alert]) : Unit = {
       val stockId = stock.symbol.toInt
       if ("POSITIVE".equals(mediaLevel) && stock.price > priceMaxThreshold(stockId)) {
-        collector.collect(Alert(stock.symbol, stock.timestamp, "POSITIVE"))
+        collector.collect(Alert(stock.symbol, stock.ts, "POSITIVE"))
       }
     }
 
@@ -113,3 +116,4 @@ object StockMediaConnectedDemo {
   }
 
 }
+*/

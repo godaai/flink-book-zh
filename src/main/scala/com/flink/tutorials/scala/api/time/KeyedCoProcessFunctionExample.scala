@@ -5,6 +5,7 @@ import java.sql.Timestamp
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+import com.flink.tutorials.scala.utils.stock.{StockPrice, StockSource}
 import org.apache.flink.api.common.state.{ValueState, ValueStateDescriptor}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.TimeCharacteristic
@@ -19,8 +20,6 @@ import scala.util.Random
 
 object KeyedCoProcessFunctionExample {
 
-  case class StockPrice(symbol: String, ts: Long, price: Double, volume: Int, mediaStatus: String)
-
   def main(args: Array[String]) {
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
@@ -32,7 +31,7 @@ object KeyedCoProcessFunctionExample {
 
     // 读入数据流
     val stockStream: DataStream[StockPrice] = env
-      .addSource(new StockSource("time/us-stock-tick-20200108.csv"))
+      .addSource(new StockSource("stock/stock-tick-20200108.csv"))
       .assignTimestampsAndWatermarks(new AscendingTimestampExtractor[StockPrice]() {
         override def extractAscendingTimestamp(stock: StockPrice): Long = {
           stock.ts
@@ -89,47 +88,6 @@ object KeyedCoProcessFunctionExample {
       mediaState.update(media.status)
     }
 
-  }
-
-  class StockSource(path: String) extends RichSourceFunction[StockPrice] {
-
-    var isRunning: Boolean = true
-    // 输入源
-    var streamSource: InputStream = _
-
-    override def run(sourceContext: SourceContext[StockPrice]): Unit = {
-      val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd HHmmss")
-      // 从项目的resources目录获取输入
-      streamSource = ProcessFunctionExample.getClass.getClassLoader.getResourceAsStream(path)
-      val lines: Iterator[String] = scala.io.Source.fromInputStream(streamSource).getLines
-      var isFirstLine: Boolean = true
-      var timeDiff: Long = 0
-      var lastEventTs: Long = 0
-      while (isRunning && lines.hasNext) {
-        val line = lines.next()
-        val itemStrArr = line.split(",")
-        val dateTime: LocalDateTime = LocalDateTime.parse(itemStrArr(1) + " " + itemStrArr(2), formatter)
-        val eventTs: Long = Timestamp.valueOf(dateTime).getTime
-        if (isFirstLine) {
-          // 从第一行数据提取时间戳
-          lastEventTs = eventTs
-          isFirstLine = false
-        }
-        val stock = StockPrice(itemStrArr(0), eventTs, itemStrArr(3).toDouble, itemStrArr(4).toInt, "")
-        // 输入文件中的时间戳是从小到大排列的
-        // 新读入的行如果比上一行大，sleep，这样来模拟一个有时间间隔的输入流
-        timeDiff = eventTs - lastEventTs
-        if (timeDiff > 0)
-          Thread.sleep(timeDiff)
-        sourceContext.collect(stock)
-        lastEventTs = eventTs
-      }
-    }
-
-    override def cancel(): Unit = {
-      streamSource.close()
-      isRunning = false
-    }
   }
 
   case class Media(symbol: String, ts: Long, status: String)

@@ -5,6 +5,27 @@ import org.apache.flink.streaming.api.scala._
 
 object PartitionCustomExample {
 
+  def main(args: Array[String]): Unit = {
+
+    val senv: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
+
+    // 获取当前执行环境的默认并行度
+    val defaultParalleism = senv.getParallelism
+
+    // 设置所有算子的并行度为4，表示所有算子的并行执行的实例数为4
+    senv.setParallelism(4)
+
+    val dataStream: DataStream[(Int, String)] = senv.fromElements((1, "123"), (2, "abc"), (3, "256"), (4, "zyx")
+      , (5, "bcd"), (6, "666"))
+
+    // 对(Int, String)中的第二个字段使用 MyPartitioner 中的重分布逻辑
+    val partitioned: DataStream[(Int, String)] = dataStream.partitionCustom(new MyPartitioner, 1)
+
+    partitioned.print()
+
+    senv.execute("partition custom transformation")
+  }
+
   /**
     * Partitioner[T] 其中泛型T为指定的字段类型
     * 重写partiton函数，并根据T字段对数据流中的所有元素进行数据重分配
@@ -29,29 +50,4 @@ object PartitionCustomExample {
       }
     }
   }
-
-  def main(args: Array[String]): Unit = {
-
-    val senv: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-
-    // 获取当前执行环境的默认并行度
-    val defaultParalleism = senv.getParallelism
-
-    // 设置所有算子的并行度为4，表示所有算子的并行执行的实例数为4
-    senv.setParallelism(4)
-
-    val dataStream: DataStream[(Int, String)] = senv.fromElements((1, "123"), (2, "abc"), (3, "256"), (4, "zyx")
-      , (5, "bcd"), (6, "666"))
-
-
-
-    // 对(Int, String)中的第二个字段使用 MyPartitioner 中的重分布逻辑
-    val partitioned = dataStream.partitionCustom(new MyPartitioner, 1)
-
-    partitioned.print()
-
-    senv.execute("partition custom transformation")
-
-  }
-
 }

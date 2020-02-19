@@ -27,7 +27,6 @@ under the License.
 	<packaging>jar</packaging>
 
 	<name>Flink Tutorials</name>
-	<url>http://www.myorganization.org</url>
 
 	<repositories>
 		<repository>
@@ -45,7 +44,7 @@ under the License.
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<flink.version>1.9.1</flink.version>
+		<flink.version>1.10.0</flink.version>
 		<scala.binary.version>2.11</scala.binary.version>
 		<scala.version>2.11.12</scala.version>
 	</properties>
@@ -61,11 +60,6 @@ under the License.
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-connector-wikiedits_${scala.binary.version}</artifactId>
-			<version>${flink.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-streaming-scala_${scala.binary.version}</artifactId>
 			<version>${flink.version}</version>
 			<scope>provided</scope>
@@ -73,6 +67,11 @@ under the License.
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-runtime_${scala.binary.version}</artifactId>
+			<version>${flink.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-runtime-web_${scala.binary.version}</artifactId>
 			<version>${flink.version}</version>
 		</dependency>
 
@@ -86,14 +85,12 @@ under the License.
 
 		<!-- Add connector dependencies here. They must be in the default scope (compile). -->
 
-		<!-- Example:
 
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-connector-kafka-0.10_${scala.binary.version}</artifactId>
+			<artifactId>flink-connector-kafka_2.11</artifactId>
 			<version>${flink.version}</version>
 		</dependency>
-		-->
 
 		<!-- Add logging framework, to produce console output when running in the IDE. -->
 		<!-- These dependencies are excluded from the application JAR by default. -->
@@ -127,11 +124,6 @@ under the License.
 							<goal>shade</goal>
 						</goals>
 						<configuration>
-							<artifactSet>
-								<includes>
-									<include>org.apache.flink:flink-connector-wikiedits_2.11</include>
-								</includes>
-							</artifactSet>
 							<filters>
 								<filter>
 									<!-- Do not copy the signatures in the META-INF folder.
@@ -146,7 +138,7 @@ under the License.
 							</filters>
 							<transformers>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									<mainClass>com.flink.tutorials.demos.stock.StockPriceDemo</mainClass>
+<!--									<mainClass>com.flink.tutorials.java.api.projects.wordcount.WordCountKafkaInStdOut</mainClass>-->
 								</transformer>
 							</transformers>
 						</configuration>
@@ -274,12 +266,6 @@ under the License.
 					<groupId>org.scala-lang</groupId>
 					<artifactId>scala-library</artifactId>
 					<version>${scala.version}</version>
-					<scope>compile</scope>
-				</dependency>
-				<dependency>
-					<groupId>org.apache.flink</groupId>
-					<artifactId>flink-connector-wikiedits_${scala.binary.version}</artifactId>
-					<version>${flink.version}</version>
 					<scope>compile</scope>
 				</dependency>
 			</dependencies>

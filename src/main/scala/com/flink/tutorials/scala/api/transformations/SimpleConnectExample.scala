@@ -14,19 +14,17 @@ object SimpleConnectExample {
 
     val connectedStream: ConnectedStreams[Int, String] = intStream.connect(stringStream)
 
-    // CoMapFunction三个泛型分别对应第一个流的输入、第二个流的输入，map之后的输出
-    class MyCoMapFunction extends CoMapFunction[Int, String, String] {
-
-        override def map1(input1: Int): String = input1.toString
-
-        override def map2(input2: String): String = input2
-    }
-
     val mapResult = connectedStream.map(new MyCoMapFunction)
 
     senv.execute("simple connect transformation")
 
   }
 
+  // CoMapFunction三个泛型分别对应第一个流的输入、第二个流的输入，map之后的输出
+  class MyCoMapFunction extends CoMapFunction[Int, String, String] {
 
+    override def map1(input1: Int): String = input1.toString
+
+    override def map2(input2: String): String = input2
+  }
 }

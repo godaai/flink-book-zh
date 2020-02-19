@@ -80,5 +80,4 @@ object PeriodicWatermark {
         null
     }
   }
-
 }
