@@ -9,14 +9,6 @@ import org.apache.flink.util.Collector
 
 object JoinExample {
 
-  class MyJoinFunction extends JoinFunction[(String, Int), (String, Int), String] {
-
-    override def join(input1: (String, Int), input2: (String, Int)): String = {
-      "input 1 :" + input1._2 + ", input 2 :" + input2._2
-    }
-
-  }
-
   def main(args: Array[String]): Unit = {
 
     val senv = StreamExecutionEnvironment.getExecutionEnvironment
@@ -55,4 +47,10 @@ object JoinExample {
     senv.execute("window join function")
   }
 
+  class MyJoinFunction extends JoinFunction[(String, Int), (String, Int), String] {
+
+    override def join(input1: (String, Int), input2: (String, Int)): String = {
+      "input 1 :" + input1._2 + ", input 2 :" + input2._2
+    }
+  }
 }

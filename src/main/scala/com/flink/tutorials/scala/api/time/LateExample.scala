@@ -20,6 +20,46 @@ import scala.util.Random
 
 object LateExample {
 
+  def main(args: Array[String]): Unit = {
+
+    val senv = StreamExecutionEnvironment.getExecutionEnvironment
+    senv.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    senv.setParallelism(1)
+    senv.getConfig.setAutoWatermarkInterval(2000L)
+
+    val socketSource = senv.socketTextStream("localhost", 9000)
+
+    // 数据流有三个字段：（key, 时间戳, 数值）
+    val input: DataStream[(String, Long, Int)] = senv
+      .addSource(new MySource)
+      .assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor[(String, Long, Int)](Time.seconds(5)) {
+        override def extractTimestamp(element: (String, Long, Int)): Long = {
+          element._2
+        }
+      })
+
+    val mainStream = input.keyBy(item => item._1)
+        .timeWindow(Time.seconds(5))
+        // 将输出写到late-elements里
+        .sideOutputLateData(new OutputTag[(String, Long, Int)]("late-elements"))
+        .aggregate(new CountAggregate)
+
+    // 接受late-elements，形成一个数据流
+    val lateStream: DataStream[(String, Long, Int)] = mainStream.getSideOutput(new OutputTag[(String, Long, Int)]("late-elements"))
+
+//    mainStream.print()
+//    lateStream.print()
+
+    val allowedLatenessStream = input.keyBy(item => item._1)
+        .timeWindow(Time.seconds(5))
+        .allowedLateness(Time.seconds(5))
+        .process(new AllowedLatenessFunction)
+
+    allowedLatenessStream.print()
+
+    senv.execute("late elements")
+  }
+
   class CountAggregate extends AggregateFunction[(String, Long, Int), (String, Int), (String, Int)] {
 
     override def createAccumulator() = ("", 0)
@@ -86,47 +126,6 @@ object LateExample {
       }
 
     }
-  }
-
-  def main(args: Array[String]): Unit = {
-
-    val senv = StreamExecutionEnvironment.getExecutionEnvironment
-    senv.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    senv.setParallelism(1)
-    senv.getConfig.setAutoWatermarkInterval(2000L)
-
-    val socketSource = senv.socketTextStream("localhost", 9000)
-
-    // 数据流有三个字段：（key, 时间戳, 数值）
-    val input: DataStream[(String, Long, Int)] = senv
-      .addSource(new MySource)
-      .assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor[(String, Long, Int)](Time.seconds(5)) {
-        override def extractTimestamp(element: (String, Long, Int)): Long = {
-          element._2
-        }
-      })
-
-    val mainStream = input.keyBy(item => item._1)
-        .timeWindow(Time.seconds(5))
-        // 将输出写到late-elements里
-        .sideOutputLateData(new OutputTag[(String, Long, Int)]("late-elements"))
-        .aggregate(new CountAggregate)
-
-    // 接受late-elements，形成一个数据流
-    val lateStream: DataStream[(String, Long, Int)] = mainStream.getSideOutput(new OutputTag[(String, Long, Int)]("late-elements"))
-
-//    mainStream.print()
-//    lateStream.print()
-
-    val allowedLatenessStream = input.keyBy(item => item._1)
-        .timeWindow(Time.seconds(5))
-        .allowedLateness(Time.seconds(5))
-        .process(new AllowedLatenessFunction)
-
-    allowedLatenessStream.print()
-
-
-    senv.execute("late elements")
   }
 
 

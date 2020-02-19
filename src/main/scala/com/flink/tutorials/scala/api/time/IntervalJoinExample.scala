@@ -1,7 +1,5 @@
 package com.flink.tutorials.scala.api.time
 
-import java.text.SimpleDateFormat
-
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.functions.co.ProcessJoinFunction
 import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor
@@ -10,17 +8,6 @@ import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.util.Collector
 
 object IntervalJoinExample {
-
-  class MyProcessFunction extends ProcessJoinFunction[(String, Long, Int), (String, Long, Int), String] {
-    override def processElement(input1: (String, Long, Int),
-                                input2: (String, Long, Int),
-                                context: ProcessJoinFunction[(String, Long, Int), (String, Long, Int), String]#Context,
-                                out: Collector[String]): Unit = {
-
-      out.collect("input 1: " + input1.toString() + ", input 2: " + input2.toString)
-
-    }
-  }
 
   def main(args: Array[String]): Unit = {
 
@@ -68,6 +55,17 @@ object IntervalJoinExample {
     intervalJoinResult.print()
 
     senv.execute("interval join function")
+  }
+
+  class MyProcessFunction extends ProcessJoinFunction[(String, Long, Int), (String, Long, Int), String] {
+    override def processElement(input1: (String, Long, Int),
+                                input2: (String, Long, Int),
+                                context: ProcessJoinFunction[(String, Long, Int), (String, Long, Int), String]#Context,
+                                out: Collector[String]): Unit = {
+
+      out.collect("input 1: " + input1.toString() + ", input 2: " + input2.toString)
+
+    }
   }
 
 }

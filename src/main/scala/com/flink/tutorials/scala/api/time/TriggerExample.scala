@@ -1,5 +1,6 @@
 package com.flink.tutorials.scala.api.time
 
+import com.flink.tutorials.scala.utils.stock.{StockPrice, StockSource}
 import org.apache.flink.api.common.functions.AggregateFunction
 import org.apache.flink.api.common.state.{ValueState, ValueStateDescriptor}
 import org.apache.flink.streaming.api.TimeCharacteristic
@@ -7,26 +8,25 @@ import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.streaming.api.windowing.triggers.{Trigger, TriggerResult}
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow
-import org.apache.flink.util.Collector
 
 object TriggerExample {
 
-  case class StockPrice(symbol: String, price: Double)
+  def main(args: Array[String]): Unit = {
 
-  // IN: StockPrice
-  // ACC：(String, Double, Int) - (symbol, sum, count)
-  // OUT: (String, Double) - (symbol, average)
-  class AverageAggregate extends AggregateFunction[StockPrice, (String, Double, Int), (String, Double)] {
+    val senv = StreamExecutionEnvironment.getExecutionEnvironment
+    senv.setStreamTimeCharacteristic(TimeCharacteristic.ProcessingTime)
 
-    override def createAccumulator() = ("", 0, 0)
+    val input = senv.addSource(new StockSource("stock/stock-tick-20200108.csv"))
 
-    override def add(item: StockPrice, accumulator: (String, Double, Int)) =
-      (item.symbol, accumulator._2 + item.price, accumulator._3 + 1)
+    val average = input
+      .keyBy(s => s.symbol)
+      .timeWindow(Time.seconds(60))
+      .trigger(new MyTrigger)
+      .aggregate(new AverageAggregate)
 
-    override def getResult(accumulator:(String, Double, Int)) = (accumulator._1 ,accumulator._2 / accumulator._3)
+    average.print()
 
-    override def merge(a: (String, Double, Int), b: (String, Double, Int)) =
-      (a._1 ,a._2 + b._2, a._3 + b._3)
+    senv.execute("trigger")
   }
 
   class MyTrigger extends Trigger[StockPrice, TimeWindow] {
@@ -72,31 +72,20 @@ object TriggerExample {
     }
   }
 
-  def main(args: Array[String]): Unit = {
+  // IN: StockPrice
+  // ACC：(String, Double, Int) - (symbol, sum, count)
+  // OUT: (String, Double) - (symbol, average)
+  class AverageAggregate extends AggregateFunction[StockPrice, (String, Double, Int), (String, Double)] {
 
-    val senv = StreamExecutionEnvironment.getExecutionEnvironment
-    senv.setStreamTimeCharacteristic(TimeCharacteristic.ProcessingTime)
+    override def createAccumulator() = ("", 0, 0)
 
-    val socketSource = senv.socketTextStream("localhost", 9000)
+    override def add(item: StockPrice, accumulator: (String, Double, Int)) =
+      (item.symbol, accumulator._2 + item.price, accumulator._3 + 1)
 
-    val input: DataStream[StockPrice] = socketSource.flatMap {
-      (line: String, out: Collector[StockPrice]) => {
-        val array = line.split(" ")
-        if (array.size == 2) {
-          out.collect(StockPrice(array(0), array(1).toDouble))
-        }
-      }
-    }
+    override def getResult(accumulator:(String, Double, Int)) = (accumulator._1 ,accumulator._2 / accumulator._3)
 
-    val average = input
-      .keyBy(s => s.symbol)
-      .timeWindow(Time.seconds(60))
-      .trigger(new MyTrigger)
-      .aggregate(new AverageAggregate)
-
-    average.print()
-
-    senv.execute("trigger")
+    override def merge(a: (String, Double, Int), b: (String, Double, Int)) =
+      (a._1 ,a._2 + b._2, a._3 + b._3)
   }
 
 }
