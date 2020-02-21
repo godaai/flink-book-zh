@@ -1,4 +1,4 @@
-package com.flink.tutorials.java.api.basic;
+package com.flink.tutorials.java.basic;
 
 public class Overloading {
 

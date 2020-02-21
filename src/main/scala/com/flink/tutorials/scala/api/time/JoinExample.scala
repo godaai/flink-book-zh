@@ -36,7 +36,7 @@ object JoinExample {
     }
 
 
-    val joinResult = input1.join(input2)
+    val joinResult: DataStream[String] = input1.join(input2)
       .where(i1 => i1._1)
       .equalTo(i2 => i2._1)
       .window(TumblingProcessingTimeWindows.of(Time.seconds(60)))

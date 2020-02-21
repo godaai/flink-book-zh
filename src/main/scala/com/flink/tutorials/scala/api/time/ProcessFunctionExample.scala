@@ -1,18 +1,12 @@
 package com.flink.tutorials.scala.api.time
 
-import java.io.InputStream
-import java.sql.Timestamp
 import java.text.SimpleDateFormat
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 import com.flink.tutorials.scala.utils.stock.{StockPrice, StockSource}
 import org.apache.flink.api.common.state.{ValueState, ValueStateDescriptor}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction
-import org.apache.flink.streaming.api.functions.source.RichSourceFunction
-import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext
 import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.util.Collector
@@ -38,7 +32,7 @@ object ProcessFunctionExample {
       }
     )
 
-    val warnings = inputStream
+    val warnings: DataStream[String] = inputStream
       .keyBy(stock => stock.symbol)
       // 调用process函数
       .process(new IncreaseAlertFunction(10000))
@@ -53,6 +47,7 @@ object ProcessFunctionExample {
     env.execute("stock tick data")
   }
 
+  // 三个泛型分别为 Key、输入、输出
   class IncreaseAlertFunction(intervalMills: Long)
     extends KeyedProcessFunction[String, StockPrice, String] {
 
@@ -106,7 +101,7 @@ object ProcessFunctionExample {
 
       val formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
 
-      out.collect("stock: " + formatter.format(ts) + ", symbol: '" + ctx.getCurrentKey +
+      out.collect(formatter.format(ts) + ", symbol: " + ctx.getCurrentKey +
         " monotonically increased for " + intervalMills + " millisecond.")
       // 清空currentTimer状态
       currentTimer.clear()

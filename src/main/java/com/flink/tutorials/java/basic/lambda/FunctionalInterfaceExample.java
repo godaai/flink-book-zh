@@ -1,4 +1,4 @@
-package com.flink.tutorials.java.api.basic.lambda;
+package com.flink.tutorials.java.basic.lambda;
 
 @FunctionalInterface
 interface AddInterface<T> {

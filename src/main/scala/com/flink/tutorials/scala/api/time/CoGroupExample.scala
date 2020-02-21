@@ -12,16 +12,6 @@ import collection.JavaConverters._
 
 object CoGroupExample {
 
-  class MyCoGroupFunction extends CoGroupFunction[(String, Int), (String, Int), String] {
-
-    // 这里的类型是Java的Iterable，需要引用 collection.JavaConverters._ 并转成Scala
-    override def coGroup(input1: lang.Iterable[(String, Int)], input2: lang.Iterable[(String, Int)], out: Collector[String]): Unit = {
-      input1.asScala.foreach(element => out.collect("input1 :" + element.toString()))
-      input2.asScala.foreach(element => out.collect("input2 :" + element.toString()))
-    }
-
-  }
-
   def main(args: Array[String]): Unit = {
 
     val senv = StreamExecutionEnvironment.getExecutionEnvironment
@@ -58,6 +48,15 @@ object CoGroupExample {
     coGroupResult.print()
 
     senv.execute("window cogroup function")
+  }
+
+  class MyCoGroupFunction extends CoGroupFunction[(String, Int), (String, Int), String] {
+
+    // 这里的类型是Java的Iterable，需要引用 collection.JavaConverters._ 并转成Scala
+    override def coGroup(input1: lang.Iterable[(String, Int)], input2: lang.Iterable[(String, Int)], out: Collector[String]): Unit = {
+      input1.asScala.foreach(element => out.collect("input1 :" + element.toString()))
+      input2.asScala.foreach(element => out.collect("input2 :" + element.toString()))
+    }
   }
 
 }

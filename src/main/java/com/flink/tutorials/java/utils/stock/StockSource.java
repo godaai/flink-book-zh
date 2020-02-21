@@ -1,4 +1,4 @@
-package com.flink.tutorials.java.api.utils.stock;
+package com.flink.tutorials.java.utils.stock;
 
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 

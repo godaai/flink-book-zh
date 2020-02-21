@@ -1,33 +1,41 @@
-package com.flink.tutorials.java.api.projects.wordcount;
+package com.flink.tutorials.java.projects.wordcount;
 
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
-import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer;
-import org.apache.flink.streaming.connectors.kafka.KafkaSerializationSchema;
 import org.apache.flink.util.Collector;
-import org.apache.kafka.clients.producer.ProducerRecord;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
-public class WordCountKafkaInKafkaOut {
+public class WordCountKafkaInStdOut {
 
     public static void main(String[] args) throws Exception {
 
         // 创建Flink执行环境
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        // StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        Configuration conf = new Configuration();
+        // 访问 http://localhost:8082 可以看到Flink Web UI
+        conf.setInteger(RestOptions.PORT, 8082);
+        // 创建本地执行环境，并行度为2
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(2, conf);
+
+        // 是否开启算子链
+        // env.disableOperatorChaining();
+
+        // 设置整个作业的并行度
+        // env.setParallelism(2);
 
         // Kafka参数
         Properties properties = new Properties();
         properties.setProperty("bootstrap.servers", "localhost:9092");
         properties.setProperty("group.id", "flink-group");
         String inputTopic = "Shakespeare";
-        String outputTopic = "WordCount";
 
         // Source
         FlinkKafkaConsumer<String> consumer =
@@ -53,30 +61,9 @@ public class WordCountKafkaInKafkaOut {
             .sum(1);
 
         // Sink
-        FlinkKafkaProducer<Tuple2<String, Integer>> producer = new FlinkKafkaProducer<Tuple2<String, Integer>> (
-                outputTopic,
-                new WordCountKafkaInKafkaOut.KafkaWordCountSerializationSchema(outputTopic),
-                properties,
-                FlinkKafkaProducer.Semantic.EXACTLY_ONCE);
-        wordCount.addSink(producer);
+        wordCount.print().setParallelism(1);
 
         // execute
         env.execute("kafka streaming word count");
-
-    }
-
-    public static class KafkaWordCountSerializationSchema implements KafkaSerializationSchema<Tuple2<String, Integer>> {
-
-        private String topic;
-
-        public KafkaWordCountSerializationSchema(String topic) {
-            super();
-            this.topic = topic;
-        }
-
-        @Override
-        public ProducerRecord<byte[], byte[]> serialize(Tuple2<String, Integer> element, Long timestamp) {
-            return new ProducerRecord<byte[], byte[]>(topic, (element.f0 + ": " + element.f1).getBytes(StandardCharsets.UTF_8));
-        }
     }
 }

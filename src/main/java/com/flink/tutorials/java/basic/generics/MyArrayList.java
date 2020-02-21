@@ -1,4 +1,4 @@
-package com.flink.tutorials.java.api.basic.generics;
+package com.flink.tutorials.java.basic.generics;
 
 public class MyArrayList<T> {
 

@@ -47,7 +47,7 @@ object IntervalJoinExample {
         }
       })
 
-    val intervalJoinResult = input1.keyBy(_._1)
+    val intervalJoinResult: DataStream[String] = input1.keyBy(_._1)
       .intervalJoin(input2.keyBy(_._1))
       .between(Time.milliseconds(-5), Time.milliseconds(10))
       .process(new MyProcessFunction)
@@ -63,7 +63,7 @@ object IntervalJoinExample {
                                 context: ProcessJoinFunction[(String, Long, Int), (String, Long, Int), String]#Context,
                                 out: Collector[String]): Unit = {
 
-      out.collect("input 1: " + input1.toString() + ", input 2: " + input2.toString)
+      out.collect("input 1: " + input1.toString + ", input 2: " + input2.toString)
 
     }
   }

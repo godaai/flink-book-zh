@@ -1,20 +1,21 @@
 package com.flink.tutorials.java.api.time;
 
-import com.flink.tutorials.java.api.utils.random.RandomId;
-import com.flink.tutorials.java.api.utils.random.RandomSource;
-import com.flink.tutorials.java.api.utils.stock.StockPrice;
-import com.flink.tutorials.java.api.utils.stock.StockSource;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
+import org.apache.flink.streaming.api.functions.AssignerWithPunctuatedWatermarks;
+import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor;
 import org.apache.flink.streaming.api.watermark.Watermark;
+import org.apache.flink.streaming.api.windowing.time.Time;
 
-public class PeriodicWatermark {
+public class AssignWatermark {
 
     public static void main(String[] args) throws Exception {
+
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
@@ -30,36 +31,21 @@ public class PeriodicWatermark {
                 })
                 .returns(Types.TUPLE(Types.STRING, Types.LONG));
 
-//        DataStream<> watermark = input.assignTimestampsAndWatermarks(new MyPeriodicAssigner)
-//
-//        DataStream<> watermark = input.assignTimestampsAndWatermarks(new MyPeriodicAssigner)
-//        val boundedOutOfOrder = input.assignTimestampsAndWatermarks(
-//                new BoundedOutOfOrdernessTimestampExtractor[(String, Long)](Time.minutes(1)) {
-//            override def extractTimestamp(element: (String, Long)): Long = {
-//                    element._2
-//            }
-//        })
+        // 第二个字段是时间戳
+        DataStream<Tuple2<String, Long>> watermark = input.assignTimestampsAndWatermarks(new MyPeriodicAssigner());
+        DataStream boundedOutOfOrder = input.assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor<Tuple2<String, Long>>(Time.minutes(1)) {
+            @Override
+            public long extractTimestamp(Tuple2<String, Long> element) {
+                return element.f1;
+            }
+        });
 
         env.execute("periodic and punctuated watermark");
-
-//        val socketSource = env.socketTextStream("localhost", 9000)
-//
-//        val input = socketSource.map{
-//            line => {
-//                val arr = line.split(" ")
-//                val id = arr(0)
-//                val time = arr(1).toLong
-//                        (id, time)
-//            }
-//        }
-
-        env.execute("event time and watermark");
     }
 
     public static class MyPeriodicAssigner implements AssignerWithPeriodicWatermarks<Tuple2<String, Long>> {
-
-        private long bound = 60 * 1000;
-        private long maxTs = Long.MIN_VALUE;
+        private long bound = 60 * 1000;        // 1分钟
+        private long maxTs = Long.MIN_VALUE;   // 已抽取的Timestamp最大值
 
         @Override
         public long extractTimestamp(Tuple2<String, Long> element, long previousElementTimestamp) {
@@ -76,4 +62,20 @@ public class PeriodicWatermark {
         }
     }
 
+    // 第二个字段是时间戳，第三个字段判断是否为Watermark的标记
+    public static class MyPunctuatedAssigner implements AssignerWithPunctuatedWatermarks<Tuple3<String, Long, Boolean>> {
+        @Override
+        public long extractTimestamp(Tuple3<String, Long, Boolean> element, long previousElementTimestamp) {
+            return element.f1;
+        }
+
+        @Override
+        public Watermark checkAndGetNextWatermark(Tuple3<String, Long, Boolean> element, long extractedTimestamp) {
+            if (element.f2) {
+                return new Watermark(extractedTimestamp);
+            } else {
+                return null;
+            }
+        }
+    }
 }

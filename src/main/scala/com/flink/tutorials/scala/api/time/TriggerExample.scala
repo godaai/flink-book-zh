@@ -1,7 +1,7 @@
 package com.flink.tutorials.scala.api.time
 
+import com.flink.tutorials.scala.api.time.AggregateFunctionExample.AverageAggregate
 import com.flink.tutorials.scala.utils.stock.{StockPrice, StockSource}
-import org.apache.flink.api.common.functions.AggregateFunction
 import org.apache.flink.api.common.state.{ValueState, ValueStateDescriptor}
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala._
@@ -16,9 +16,9 @@ object TriggerExample {
     val senv = StreamExecutionEnvironment.getExecutionEnvironment
     senv.setStreamTimeCharacteristic(TimeCharacteristic.ProcessingTime)
 
-    val input = senv.addSource(new StockSource("stock/stock-tick-20200108.csv"))
+    val stockStream = senv.addSource(new StockSource("stock/stock-tick-20200108.csv"))
 
-    val average = input
+    val average = stockStream
       .keyBy(s => s.symbol)
       .timeWindow(Time.seconds(60))
       .trigger(new MyTrigger)
@@ -49,7 +49,7 @@ object TriggerExample {
           triggerResult = TriggerResult.FIRE_AND_PURGE
         } else if ((lastPriceState.value() - element.price) > lastPriceState.value() * 0.01) {
           val t = triggerContext.getCurrentProcessingTime + (10 * 1000 - (triggerContext.getCurrentProcessingTime % 10 * 1000))
-          // 给10秒后注册一个Timer
+          // 跌幅不大，注册一个10秒后的Timer
           triggerContext.registerProcessingTimeTimer(t)
         }
       }
@@ -57,7 +57,7 @@ object TriggerExample {
       triggerResult
     }
 
-    // 我们不用EventTime，直接返回一个CONTINUE
+    // 这里我们不用EventTime，直接返回一个CONTINUE
     override def onEventTime(time: Long, window: TimeWindow, triggerContext: Trigger.TriggerContext): TriggerResult = {
       TriggerResult.CONTINUE
     }
@@ -71,21 +71,4 @@ object TriggerExample {
       lastPrice.clear()
     }
   }
-
-  // IN: StockPrice
-  // ACC：(String, Double, Int) - (symbol, sum, count)
-  // OUT: (String, Double) - (symbol, average)
-  class AverageAggregate extends AggregateFunction[StockPrice, (String, Double, Int), (String, Double)] {
-
-    override def createAccumulator() = ("", 0, 0)
-
-    override def add(item: StockPrice, accumulator: (String, Double, Int)) =
-      (item.symbol, accumulator._2 + item.price, accumulator._3 + 1)
-
-    override def getResult(accumulator:(String, Double, Int)) = (accumulator._1 ,accumulator._2 / accumulator._3)
-
-    override def merge(a: (String, Double, Int), b: (String, Double, Int)) =
-      (a._1 ,a._2 + b._2, a._3 + b._3)
-  }
-
 }

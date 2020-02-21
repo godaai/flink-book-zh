@@ -9,7 +9,7 @@ import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.api.windowing.time.Time
 
-object PeriodicWatermark {
+object AssignWatermark {
 
   def main(args: Array[String]): Unit = {
 
@@ -30,6 +30,7 @@ object PeriodicWatermark {
       }
     }
 
+    // 第二个字段是时间戳
     val watermark = input.assignTimestampsAndWatermarks(new MyPeriodicAssigner)
     val boundedOutOfOrder = input.assignTimestampsAndWatermarks(
       new BoundedOutOfOrdernessTimestampExtractor[(String, Long)](Time.minutes(1)) {

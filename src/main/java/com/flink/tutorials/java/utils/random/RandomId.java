@@ -1,4 +1,4 @@
-package com.flink.tutorials.java.api.utils.random;
+package com.flink.tutorials.java.utils.random;
 
 public class RandomId {
 

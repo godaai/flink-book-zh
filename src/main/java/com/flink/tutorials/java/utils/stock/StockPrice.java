@@ -1,4 +1,4 @@
-package com.flink.tutorials.java.api.utils.stock;
+package com.flink.tutorials.java.utils.stock;
 
 /**
  * POJO StockPrice
@@ -32,6 +32,9 @@ public class StockPrice {
 
     @Override
     public String toString() {
-        return "(" + this.symbol + "," + this.price + "," + this.ts + "," + this.volume + ")";
+        return "(" + this.symbol + "," +
+                this.price + "," + this.ts +
+                "," + this.volume + "," +
+                this.mediaStatus + ")";
     }
 }

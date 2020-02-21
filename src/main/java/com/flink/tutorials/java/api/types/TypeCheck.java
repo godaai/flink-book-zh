@@ -1,6 +1,6 @@
 package com.flink.tutorials.java.api.types;
 
-import com.flink.tutorials.java.api.utils.stock.StockPrice;
+import com.flink.tutorials.java.utils.stock.StockPrice;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 

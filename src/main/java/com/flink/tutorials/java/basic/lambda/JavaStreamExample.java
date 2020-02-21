@@ -1,4 +1,4 @@
-package com.flink.tutorials.java.api.basic.lambda;
+package com.flink.tutorials.java.basic.lambda;
 
 import java.util.Arrays;
 import java.util.List;

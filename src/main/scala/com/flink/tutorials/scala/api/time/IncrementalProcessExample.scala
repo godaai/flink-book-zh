@@ -10,21 +10,6 @@ import org.apache.flink.util.Collector
 
 object IncrementalProcessExample {
 
-  case class MaxMinPrice(symbol: String, max: Double, min: Double, windowEndTs: Long)
-
-  class WindowEndProcessFunction extends ProcessWindowFunction[(String, Double, Double), MaxMinPrice, String, TimeWindow] {
-
-    override def process(key: String,
-                         context: Context,
-                         elements: Iterable[(String, Double, Double)],
-                         out: Collector[MaxMinPrice]): Unit = {
-      val maxMinItem = elements.head
-      val windowEndTs = context.window.getEnd
-      out.collect(MaxMinPrice(key, maxMinItem._2, maxMinItem._3, windowEndTs))
-    }
-
-  }
-
   def main(args: Array[String]): Unit = {
 
     val senv = StreamExecutionEnvironment.getExecutionEnvironment
@@ -33,7 +18,7 @@ object IncrementalProcessExample {
     val input = senv.addSource(new StockSource("stock/stock-tick-20200108.csv"))
 
     // reduce的返回类型必须和输入类型相同
-    // 为此我们将StockPrice拆成一个三元组 (股票代号，最大值、最小值)
+    // 为此我们将StockPrice拆成一个四元组 (股票代号，最大值、最小值)
     val maxMin = input
       .map(s => (s.symbol, s.price, s.price))
       .keyBy(s => s._1)
@@ -48,4 +33,17 @@ object IncrementalProcessExample {
     senv.execute("combine reduce and process function")
   }
 
+  case class MaxMinPrice(symbol: String, max: Double, min: Double, windowEndTs: Long)
+
+  class WindowEndProcessFunction extends ProcessWindowFunction[(String, Double, Double), MaxMinPrice, String, TimeWindow] {
+
+    override def process(key: String,
+                         context: Context,
+                         elements: Iterable[(String, Double, Double)],
+                         out: Collector[MaxMinPrice]): Unit = {
+      val maxMinItem = elements.head
+      val windowEndTs = context.window.getEnd
+      out.collect(MaxMinPrice(key, maxMinItem._2, maxMinItem._3, windowEndTs))
+    }
+  }
 }

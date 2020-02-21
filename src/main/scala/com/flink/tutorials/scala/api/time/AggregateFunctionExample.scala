@@ -25,9 +25,12 @@ object AggregateFunctionExample {
     senv.execute("window aggregate function")
   }
 
-  // IN: StockPrice
-  // ACC：(String, Double, Int) - (symbol, sum, count)
-  // OUT: (String, Double) - (symbol, average)
+  /**
+    * 接收三个泛型：
+    * IN: StockPrice
+    * ACC：(String, Double, Int) - (symbol, sum, count)
+    * OUT: (String, Double) - (symbol, average)
+    */
   class AverageAggregate extends AggregateFunction[StockPrice, (String, Double, Int), (String, Double)] {
 
     override def createAccumulator() = ("", 0, 0)

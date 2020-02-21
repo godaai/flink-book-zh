@@ -50,7 +50,7 @@ object LateExample {
 //    mainStream.print()
 //    lateStream.print()
 
-    val allowedLatenessStream = input.keyBy(item => item._1)
+    val allowedLatenessStream: DataStream[(String, String, Int, String)] = input.keyBy(item => item._1)
         .timeWindow(Time.seconds(5))
         .allowedLateness(Time.seconds(5))
         .process(new AllowedLatenessFunction)
@@ -111,8 +111,7 @@ object LateExample {
 
       // 是否被迟到数据更新
       val isUpdated = context.windowState.getState(
-        new ValueStateDescriptor[Boolean]("isUpdated", Types.of[Boolean])
-      )
+        new ValueStateDescriptor[Boolean]("isUpdated", Types.of[Boolean]))
       val count = elements.size
       val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
@@ -127,6 +126,4 @@ object LateExample {
 
     }
   }
-
-
 }

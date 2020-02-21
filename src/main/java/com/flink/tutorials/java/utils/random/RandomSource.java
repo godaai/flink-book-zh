@@ -1,4 +1,4 @@
-package com.flink.tutorials.java.api.utils.random;
+package com.flink.tutorials.java.utils.random;
 
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 

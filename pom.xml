@@ -138,7 +138,7 @@ under the License.
 							</filters>
 							<transformers>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-<!--									<mainClass>com.flink.tutorials.java.api.projects.wordcount.WordCountKafkaInStdOut</mainClass>-->
+<!--									<mainClass>com.flink.tutorials.java.projects.wordcount.WordCountKafkaInStdOut</mainClass>-->
 								</transformer>
 							</transformers>
 						</configuration>
