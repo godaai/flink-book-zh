@@ -1,14 +1,12 @@
 package com.flink.tutorials.scala.api.state
 
-import java.io.InputStream
 
-import org.apache.flink.api.common.state.{BroadcastState, MapState, MapStateDescriptor, ValueState, ValueStateDescriptor}
+import com.flink.tutorials.scala.utils.taobao.{BehaviorPattern, UserBehavior, UserBehaviorSource}
+import org.apache.flink.api.common.state.{BroadcastState, MapStateDescriptor, ValueState, ValueStateDescriptor}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.datastream.BroadcastStream
 import org.apache.flink.streaming.api.functions.co.KeyedBroadcastProcessFunction
-import org.apache.flink.streaming.api.functions.source.RichSourceFunction
-import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext
 import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.util.Collector
@@ -23,7 +21,7 @@ object BroadcastStateExample {
 
     // 获取数据源
     val userBehaviorStream: DataStream[UserBehavior] = env
-      .addSource(new UserBehaviorSource("state/UserBehavior-20171201.csv")).assignTimestampsAndWatermarks(new AscendingTimestampExtractor[UserBehavior]() {
+      .addSource(new UserBehaviorSource("taobao/UserBehavior-20171201.csv")).assignTimestampsAndWatermarks(new AscendingTimestampExtractor[UserBehavior]() {
       override def extractAscendingTimestamp(userBehavior: UserBehavior): Long = {
         // 原始数据单位为秒，乘以1000转换成毫秒
         userBehavior.timestamp * 1000
@@ -48,25 +46,8 @@ object BroadcastStateExample {
 
     matchedStream.print()
 
-    env.execute("broadcast state example")
+    env.execute("broadcast taobao example")
   }
-
-  /**
-    * 用户行为
-    * categoryId为商品类目ID
-    * behavior包括点击（pv）、购买（buy）、加购物车（cart）、喜欢（fav）
-    * */
-  case class UserBehavior(userId: Long,
-                          itemId: Long,
-                          categoryId: Int,
-                          behavior: String,
-                          timestamp: Long)
-
-  /**
-    * 行为模式
-    * 整个模式简化为两个行为
-    * */
-  case class BehaviorPattern(firstBehavior: String, secondBehavior: String)
 
   /**
     * 四个泛型分别为：
@@ -78,7 +59,7 @@ object BroadcastStateExample {
   class BroadcastPatternFunction
     extends KeyedBroadcastProcessFunction[Long, UserBehavior, BehaviorPattern, (Long, BehaviorPattern)] {
 
-    // 用户上次性能状态句柄，每个用户存储一个状态
+    // 用户上次行为状态句柄，每个用户存储一个状态
     private var lastBehaviorState: ValueState[String] = _
     // Broadcast State Descriptor
     private var bcPatternDesc: MapStateDescriptor[Void, BehaviorPattern] = _
@@ -116,49 +97,9 @@ object BroadcastStateExample {
         if (pattern.firstBehavior.equals(lastBehavior) &&
         pattern.secondBehavior.equals(userBehavior.behavior))
           // 当前用户行为符合模式
-        collector.collect((userBehavior.userId, pattern))
+          collector.collect((userBehavior.userId, pattern))
       }
       lastBehaviorState.update(userBehavior.behavior)
     }
   }
-
-  class UserBehaviorSource(path: String) extends RichSourceFunction[UserBehavior] {
-
-    var isRunning: Boolean = true
-    // 输入源
-    var streamSource: InputStream = _
-
-    override def run(sourceContext: SourceContext[UserBehavior]): Unit = {
-      // 从项目的resources目录获取输入
-      streamSource = BroadcastStateExample.getClass.getClassLoader.getResourceAsStream(path)
-      val lines: Iterator[String] = scala.io.Source.fromInputStream(streamSource).getLines
-      var isFirstLine: Boolean = true
-      var timeDiff: Long = 0
-      var lastEventTs: Long = 0
-      while (isRunning && lines.hasNext) {
-        val line = lines.next()
-        val itemStrArr = line.split(",")
-        val eventTs: Long = itemStrArr(4).toLong
-        if (isFirstLine) {
-          // 从第一行数据提取时间戳
-          lastEventTs = eventTs
-          isFirstLine = false
-        }
-        val userBehavior = UserBehavior(itemStrArr(0).toLong, itemStrArr(1).toLong, itemStrArr(2).toInt, itemStrArr(3), eventTs)
-        // 输入文件中的时间戳是从小到大排列的
-        // 新读入的行如果比上一行大，sleep，这样来模拟一个有时间间隔的输入流
-        timeDiff = eventTs - lastEventTs
-        if (timeDiff > 0)
-          Thread.sleep(timeDiff * 1000)
-        sourceContext.collect(userBehavior)
-        lastEventTs = eventTs
-      }
-    }
-
-    override def cancel(): Unit = {
-      streamSource.close()
-      isRunning = false
-    }
-  }
-
 }
