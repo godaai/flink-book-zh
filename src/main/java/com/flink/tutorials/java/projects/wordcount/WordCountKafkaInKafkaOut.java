@@ -55,7 +55,7 @@ public class WordCountKafkaInKafkaOut {
         // Sink
         FlinkKafkaProducer<Tuple2<String, Integer>> producer = new FlinkKafkaProducer<Tuple2<String, Integer>> (
                 outputTopic,
-                new WordCountKafkaInKafkaOut.KafkaWordCountSerializationSchema(outputTopic),
+                new KafkaWordCountSerializationSchema(outputTopic),
                 properties,
                 FlinkKafkaProducer.Semantic.EXACTLY_ONCE);
         wordCount.addSink(producer);

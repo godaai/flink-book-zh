@@ -40,6 +40,7 @@ public class WordCountKafkaInStdOut {
         // Source
         FlinkKafkaConsumer<String> consumer =
                 new FlinkKafkaConsumer<String>(inputTopic, new SimpleStringSchema(), properties);
+        consumer.setStartFromEarliest();
         DataStream<String> stream = env.addSource(consumer);
 
         // Transformations
