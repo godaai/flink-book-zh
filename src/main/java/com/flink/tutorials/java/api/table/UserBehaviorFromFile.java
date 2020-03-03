@@ -32,12 +32,17 @@ public class UserBehaviorFromFile {
         .withSchema(schema)
         .createTemporaryTable("user_behavior");
 
-//        Table userBehaviorTable = tEnv.from("user_behavior");
-//        Table groupByUser = userBehaviorTable.groupBy("user_id").select("user_id, COUNT(behavior) as cnt");
+        Table userBehaviorTable = tEnv.from("user_behavior");
+        Table groupByUser = userBehaviorTable.groupBy("user_id").select("user_id, COUNT(behavior) as cnt");
 
-        Table groupByUser = tEnv.sqlQuery("SELECT user_id, COUNT(behavior) FROM user_behavior GROUP BY user_id");
+        Table groupByUserId = tEnv.sqlQuery("SELECT user_id, COUNT(behavior) AS cnt FROM user_behavior GROUP BY user_id");
 
-        DataStream<Tuple2<Boolean, Row>> result = tEnv.toRetractStream(groupByUser, Row.class);
+        Table tumbleGroupByUserId = tEnv.sqlQuery("" +
+                "SELECT user_id, TUMBLE_END(ts, INTERVAL '5' MINUTE) AS endTs, COUNT(behavior) AS cnt " +
+                "FROM user_behavior " +
+                "GROUP BY user_id, TUMBLE(ts, INTERVAL '5' MINUTE)");
+
+        DataStream<Tuple2<Boolean, Row>> result = tEnv.toRetractStream(tumbleGroupByUserId, Row.class);
         result.print();
 
         env.execute("table api");

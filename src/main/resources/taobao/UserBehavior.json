@@ -1,0 +1,6 @@
+{"user_id": "1", "item_id":"1000", "category_id": "99", "behavior": "pv", "ts": "2017-12-01T00:00:01Z"}
+{"user_id": "2", "item_id":"1001", "category_id": "98", "behavior": "pv", "ts": "2017-12-01T00:00:06Z"}
+{"user_id": "3", "item_id":"1002", "category_id": "97", "behavior": "pv", "ts": "2017-11-27T00:00:08Z"}
+{"user_id": "1", "item_id":"1000", "category_id": "99", "behavior": "fav", "ts": "2017-12-01T00:00:10Z"}
+{"user_id": "2", "item_id":"1001", "category_id": "98", "behavior": "buy", "ts": "2017-12-01T00:00:12Z"}
+{"user_id": "2", "item_id":"1001", "category_id": "98", "behavior": "pv", "ts": "2017-12-01T00:00:14Z"}
