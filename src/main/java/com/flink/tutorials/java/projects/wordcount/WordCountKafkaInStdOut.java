@@ -18,12 +18,12 @@ public class WordCountKafkaInStdOut {
     public static void main(String[] args) throws Exception {
 
         // 创建Flink执行环境
-        // StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        Configuration conf = new Configuration();
-        // 访问 http://localhost:8082 可以看到Flink Web UI
-        conf.setInteger(RestOptions.PORT, 8082);
-        // 创建本地执行环境，并行度为2
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(2, conf);
+         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+//        Configuration conf = new Configuration();
+//        // 访问 http://localhost:8082 可以看到Flink Web UI
+//        conf.setInteger(RestOptions.PORT, 8082);
+//        // 创建本地执行环境，并行度为2
+//        StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(2, conf);
 
         // 是否开启算子链
         // env.disableOperatorChaining();

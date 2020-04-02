@@ -1,6 +1,5 @@
 package com.flink.tutorials.java.api.table;
 
-import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -10,15 +9,13 @@ import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.java.StreamTableEnvironment;
 import org.apache.flink.types.Row;
 
-public class UserBehaviorFromKafkaSQLDDL {
+public class UserBehaviorUVPerMin {
 
     public static void main(String[] args) throws Exception {
 
         EnvironmentSettings fsSettings = EnvironmentSettings.newInstance().useBlinkPlanner().inStreamingMode().build();
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-
         StreamTableEnvironment tEnv = StreamTableEnvironment.create(env, fsSettings);
-        tEnv.getConfig().setIdleStateRetentionTime(Time.hours(1), Time.hours(2));
 
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
@@ -44,28 +41,26 @@ public class UserBehaviorFromKafkaSQLDDL {
         String explanation = tEnv.explain(groupByUserId);
         System.out.println(explanation);
 
-        Table tumbleGroupByUserId = tEnv.sqlQuery("SELECT \n" +
-                "\tuser_id, \n" +
-                "\tCOUNT(behavior) AS behavior_cnt, \n" +
-                "\tTUMBLE_END(ts, INTERVAL '10' SECOND) AS end_ts \n" +
-                "FROM user_behavior\n" +
-                "GROUP BY user_id, TUMBLE(ts, INTERVAL '10' SECOND)");
-
-        Table inlineGroupByUserId = tEnv.sqlQuery("" +
+        Table uv = tEnv.sqlQuery("" +
                 "SELECT " +
-                "    TUMBLE_END(rowtime, INTERVAL '20' SECOND)," +
-                "    user_id," +
-                "    SUM(cnt) " +
-                "FROM (" +
-                "SELECT \n" +
-                "\tuser_id, \n" +
-                "\tCOUNT(behavior) AS cnt, \n" +
-                "\tTUMBLE_ROWTIME(ts, INTERVAL '10' SECOND) AS rowtime \n" +
-                "FROM user_behavior\n" +
-                "GROUP BY user_id, TUMBLE(ts, INTERVAL '10' SECOND))" +
-                "GROUP BY TUMBLE(rowtime, INTERVAL '20' SECOND), user_id");
+                "   user_id, " +
+                "   " +
+                "   COUNT(*) OVER w AS uv " +
+                "FROM user_behavior " +
+                "WINDOW w AS (" +
+                "ORDER BY ts ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)");
+        DataStream<Tuple2<Boolean, Row>> result = tEnv.toRetractStream(uv, Row.class);
 
-        DataStream<Tuple2<Boolean, Row>> result = tEnv.toRetractStream(inlineGroupByUserId, Row.class);
+//        Table uv = tEnv.sqlQuery("" +
+//                "SELECT time_str, MAX(uv) FROM (" +
+//                "SELECT " +
+//                "   MAX(SUBSTR(DATE_FORMAT(ts, 'HH:mm'), 1, 4) || '0') OVER w AS time_str, " +
+//                "   COUNT(DISTINCT user_id) OVER w AS uv " +
+//                "FROM user_behavior " +
+//                "WINDOW w AS (" +
+//                "ORDER BY ts ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))" +
+//                "GROUP BY time_str");
+//        DataStream<Tuple2<Boolean, Row>> result = tEnv.toRetractStream(uv, Row.class);
         result.print();
 
         env.execute("table api");

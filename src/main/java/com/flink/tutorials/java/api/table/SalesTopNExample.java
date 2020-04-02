@@ -12,7 +12,7 @@ import org.apache.flink.types.Row;
 import java.util.ArrayList;
 import java.util.List;
 
-public class TimeAttrFromDataStream {
+public class SalesTopNExample {
 
     public static void main(String[] args) throws Exception {
         EnvironmentSettings fsSettings = EnvironmentSettings.newInstance().useBlinkPlanner().inStreamingMode().build();
@@ -28,16 +28,11 @@ public class TimeAttrFromDataStream {
         itemList.add(Tuple3.of(6L, 99L, 989L));
 
         DataStream<Tuple3<Long, Long, Long>> itemSalesStream = env.fromCollection(itemList);
-        Table itemSalesTable = tEnv.fromDataStream(itemSalesStream, "item_id, category_id, sales, ts.proctime");
+        Table itemSalesTable = tEnv.fromDataStream(itemSalesStream, "item_id, category_id, sales, time.proctime");
 
         tEnv.createTemporaryView("sales", itemSalesTable);
 
-        Table topN = tEnv.sqlQuery("SELECT " +
-                "item_id, " +
-                "SUM(sales) AS sales_sum, " +
-                "TUMBLE_END(ts, INTERVAL '10' SECOND) AS end_ts " +
-                "FROM sales " +
-                "GROUP BY item_id, TUMBLE(ts, INTERVAL '10' SECOND)");
+        Table topN = tEnv.sqlQuery("SELECT * FROM sales");
 
 //        Table topN = tEnv.sqlQuery(
 //                "SELECT * " +

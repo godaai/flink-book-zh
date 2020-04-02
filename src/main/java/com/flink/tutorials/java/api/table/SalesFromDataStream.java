@@ -12,7 +12,7 @@ import org.apache.flink.types.Row;
 import java.util.ArrayList;
 import java.util.List;
 
-public class TopNExample {
+public class SalesFromDataStream {
 
     public static void main(String[] args) throws Exception {
         EnvironmentSettings fsSettings = EnvironmentSettings.newInstance().useBlinkPlanner().inStreamingMode().build();
@@ -28,11 +28,25 @@ public class TopNExample {
         itemList.add(Tuple3.of(6L, 99L, 989L));
 
         DataStream<Tuple3<Long, Long, Long>> itemSalesStream = env.fromCollection(itemList);
-        Table itemSalesTable = tEnv.fromDataStream(itemSalesStream, "item_id, category_id, sales, time.proctime");
+        Table itemSalesTable = tEnv.fromDataStream(itemSalesStream, "item_id, category_id, sales, ts.proctime");
 
         tEnv.createTemporaryView("sales", itemSalesTable);
 
-        Table topN = tEnv.sqlQuery("SELECT * FROM sales");
+        Table windowSum = tEnv.sqlQuery("SELECT " +
+                "category_id, " +
+                "SUM(sales) OVER w AS sales_sum " +
+                "FROM sales " +
+                "WINDOW w AS (" +
+                "PARTITION BY category_id " +
+                "ORDER BY ts " +
+                "ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)");
+
+        Table sales = tEnv.sqlQuery("SELECT " +
+                "item_id, " +
+                "SUM(sales) AS sales_sum, " +
+                "TUMBLE_END(ts, INTERVAL '10' SECOND) AS end_ts " +
+                "FROM sales " +
+                "GROUP BY item_id, TUMBLE(ts, INTERVAL '10' SECOND)");
 
 //        Table topN = tEnv.sqlQuery(
 //                "SELECT * " +
@@ -41,7 +55,7 @@ public class TopNExample {
 //                        "       ROW_NUMBER() OVER (PARTITION BY category_id ORDER BY sales DESC) as row_num" +
 //                        "   FROM sales)" +
 //                        "WHERE row_num <= 3");
-        DataStream<Tuple2<Boolean, Row>> result = tEnv.toRetractStream(topN, Row.class);
+        DataStream<Tuple2<Boolean, Row>> result = tEnv.toRetractStream(windowSum, Row.class);
         result.print();
 
         env.execute("table api");

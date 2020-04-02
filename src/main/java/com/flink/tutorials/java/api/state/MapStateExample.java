@@ -8,12 +8,14 @@ import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor;
 import org.apache.flink.util.Collector;
+import org.apache.flink.contrib.streaming.state.RocksDBStateBackend;
 
 public class MapStateExample {
 
@@ -21,6 +23,10 @@ public class MapStateExample {
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+        // 如果使用Checkpoint，可以开启下面三行，Checkpoint将写入HDFS
+//        env.enableCheckpointing(2000L);
+//        StateBackend stateBackend = new RocksDBStateBackend("hdfs:///flink-ckp");
+//        env.setStateBackend(stateBackend);
 
         DataStream<UserBehavior> userBehaviorStream = env.addSource(new UserBehaviorSource("taobao/UserBehavior-20171201.csv"))
                 .assignTimestampsAndWatermarks(new AscendingTimestampExtractor<UserBehavior>() {
