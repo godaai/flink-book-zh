@@ -51,6 +51,7 @@ public class TransactionWriteSinkExample {
     }
 
     public static class TwoPhaseFileSink extends TwoPhaseCommitSinkFunction<Tuple2<String, Integer>, String, Void> {
+        // 缓存
         private BufferedWriter transactionWriter;
         private String preCommitPath;
         private String commitedPath;

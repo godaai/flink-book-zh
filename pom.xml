@@ -114,7 +114,7 @@ under the License.
 		<!-- Add connector dependencies here. They must be in the default scope (compile). -->
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-connector-kafka_2.11</artifactId>
+			<artifactId>flink-connector-kafka_${scala.binary.version}</artifactId>
 			<version>${flink.version}</version>
 		</dependency>
 
