@@ -14,6 +14,7 @@ public class FilterExample {
 
         // 使用 -> 构造Lambda表达式
         DataStream<Integer> lambda = dataStream.filter ( input -> input > 0 );
+        lambda.print();
 
         // 继承RichFilterFunction
         DataStream<Integer> richFunctionDataStream = dataStream.filter(new MyFilterFunction(2));
