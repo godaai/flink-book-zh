@@ -19,7 +19,7 @@ object MapExample {
     val lambda2 = dataStream.map { _ * 2 }
 
     // 继承RichMapFunction
-    // 第一个泛型是输入类型，第二个泛型是输出类型
+    // 第一个泛型Int是输入类型，第二个String泛型是输出类型
     class DoubleMapFunction extends RichMapFunction[Int, String] {
       override def map(input: Int): String =
         ("overide map Input : " + input.toString + ", Output : " + (input * 2).toString)

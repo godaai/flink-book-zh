@@ -12,7 +12,7 @@ object PartitionCustomExample {
     // 获取当前执行环境的默认并行度
     val defaultParalleism = senv.getParallelism
 
-    // 设置所有算子的并行度为4，表示所有算子的并行执行的实例数为4
+    // 设置所有算子的并行度为4，表示所有算子的并行执行的算子子任务数为4
     senv.setParallelism(4)
 
     val dataStream: DataStream[(Int, String)] = senv.fromElements((1, "123"), (2, "abc"), (3, "256"), (4, "zyx")

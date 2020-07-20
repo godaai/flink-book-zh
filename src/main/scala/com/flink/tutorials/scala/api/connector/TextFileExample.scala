@@ -1,6 +1,6 @@
 package com.flink.tutorials.scala.api.connector
 
-import com.flink.tutorials.java.api.connector.TextFileExample
+import com.flink.tutorials.java.chapter7.TextFileExample
 import org.apache.flink.api.java.io.TextInputFormat
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.functions.source.FileProcessingMode
