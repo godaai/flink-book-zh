@@ -1,15 +1,16 @@
 package com.flink.tutorials.java.chapter5;
 
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.typeinfo.Types;
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.co.ProcessJoinFunction;
-import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.util.Collector;
+
+import java.time.Duration;
 
 public class IntervalJoinExample {
 
@@ -33,12 +34,11 @@ public class IntervalJoinExample {
                     return Tuple3.of(id, ts, i);
                 })
                 .returns(Types.TUPLE(Types.STRING, Types.LONG, Types.INT))
-                .assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor<Tuple3<String, Long, Integer>>(Time.minutes(1)) {
-                    @Override
-                    public long extractTimestamp(Tuple3<String, Long, Integer> element) {
-                        return element.f1;
-                    }
-                });
+                .assignTimestampsAndWatermarks(
+                        WatermarkStrategy
+                                .<Tuple3<String, Long, Integer>>forBoundedOutOfOrderness(Duration.ofMinutes(1))
+                                .withTimestampAssigner((event, timestamp) -> event.f1));
+
         DataStream<Tuple3<String, Long, Integer>> input2 = socketSource2.map(
                 line -> {
                     String[] arr = line.split(" ");
@@ -48,12 +48,10 @@ public class IntervalJoinExample {
                     return Tuple3.of(id, ts, i);
                 })
                 .returns(Types.TUPLE(Types.STRING, Types.LONG, Types.INT))
-                .assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor<Tuple3<String, Long, Integer>>(Time.minutes(1)) {
-                    @Override
-                    public long extractTimestamp(Tuple3<String, Long, Integer> element) {
-                        return element.f1;
-                    }
-                });
+                .assignTimestampsAndWatermarks(
+                        WatermarkStrategy
+                                .<Tuple3<String, Long, Integer>>forBoundedOutOfOrderness(Duration.ofMinutes(1))
+                                .withTimestampAssigner((event, timestamp) -> event.f1));
 
         DataStream<String> intervalJoinResult = input1.keyBy(i -> i.f0)
                 .intervalJoin(input2.keyBy(i -> i.f0))

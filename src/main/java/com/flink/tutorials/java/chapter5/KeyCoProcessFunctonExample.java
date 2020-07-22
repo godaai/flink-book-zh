@@ -4,6 +4,7 @@ import com.flink.tutorials.java.utils.stock.Media;
 import com.flink.tutorials.java.utils.stock.MediaSource;
 import com.flink.tutorials.java.utils.stock.StockPrice;
 import com.flink.tutorials.java.utils.stock.StockSource;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.Types;
@@ -12,7 +13,6 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.co.KeyedCoProcessFunction;
-import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor;
 import org.apache.flink.util.Collector;
 
 public class KeyCoProcessFunctonExample {
@@ -27,27 +27,26 @@ public class KeyCoProcessFunctonExample {
         // 读入股票数据流
         DataStream<StockPrice> stockStream = env
                 .addSource(new StockSource("stock/stock-tick-20200108.csv"))
-                .assignTimestampsAndWatermarks(new AscendingTimestampExtractor<StockPrice>() {
-                    @Override
-                    public long extractAscendingTimestamp(StockPrice stockPrice) {
-                        return stockPrice.ts;
-                    }
-                });
+                .assignTimestampsAndWatermarks(
+                        WatermarkStrategy
+                                .<StockPrice>forMonotonousTimestamps()
+                                .withTimestampAssigner((event, timestamp) -> event.ts)
+                );
 
         // 读入媒体评价数据流
         DataStream<Media> mediaStream = env
                 .addSource(new MediaSource())
-                .assignTimestampsAndWatermarks(new AscendingTimestampExtractor<Media>() {
-                    @Override
-                    public long extractAscendingTimestamp(Media media) {
-                        return media.ts;
-                    }
-                });
+                .assignTimestampsAndWatermarks(
+                        WatermarkStrategy
+                                .<Media>forMonotonousTimestamps()
+                                .withTimestampAssigner((event, timestamp) -> event.ts)
+                );
 
         DataStream<StockPrice> joinStream = stockStream.connect(mediaStream)
                 .keyBy("symbol", "symbol")
                 // 调用process函数
                 .process(new JoinStockMediaProcessFunction());
+
         joinStream.print();
 
         env.execute("coprocess function");

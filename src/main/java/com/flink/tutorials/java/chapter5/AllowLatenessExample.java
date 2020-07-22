@@ -1,5 +1,6 @@
 package com.flink.tutorials.java.chapter5;
 
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.Types;
@@ -9,13 +10,13 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
-import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor;
 import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
 
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.Calendar;
 import java.util.Random;
 
@@ -31,12 +32,11 @@ public class AllowLatenessExample {
         // 数据流有三个字段：（key, 时间戳, 数值）
         DataStream<Tuple3<String, Long, Integer>> input = env
                 .addSource(new MySource())
-                .assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor<Tuple3<String, Long, Integer>>(Time.seconds(5)) {
-                    @Override
-                    public long extractTimestamp(Tuple3<String, Long, Integer> element) {
-                        return element.f1;
-                    }
-                });
+                .assignTimestampsAndWatermarks(
+                        WatermarkStrategy
+                                .<Tuple3<String, Long, Integer>>forBoundedOutOfOrderness(Duration.ofSeconds(5))
+                                .withTimestampAssigner((event, timestamp) -> event.f1)
+                );
 
         DataStream<Tuple4<String, String, Integer, String>> allowedLatenessStream = input.keyBy(item -> item.f0)
         .timeWindow(Time.seconds(5))

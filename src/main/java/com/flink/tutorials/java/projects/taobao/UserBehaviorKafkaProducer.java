@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.time.Instant;
 import java.util.Properties;
-import java.util.TimeZone;
 import java.util.function.Consumer;
 
 public class UserBehaviorKafkaProducer {

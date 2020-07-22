@@ -2,11 +2,11 @@ package com.flink.tutorials.java.chapter8;
 
 import com.flink.tutorials.java.chapter8.function.IsInFourRing;
 import com.flink.tutorials.java.chapter8.function.TimeDiff;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
@@ -34,12 +34,12 @@ public class ScalarFunctionExample {
 
         DataStream<Tuple4<Long, Double, Double, Timestamp>> geoStream = env
                 .fromCollection(geoList)
-                .assignTimestampsAndWatermarks(new AscendingTimestampExtractor<Tuple4<Long, Double, Double, Timestamp>>() {
-                    @Override
-                    public long extractAscendingTimestamp(Tuple4<Long, Double, Double, Timestamp> element) {
-                        return element.f3.getTime();
-                    }
-                });
+                .assignTimestampsAndWatermarks(
+                        WatermarkStrategy
+                                .<Tuple4<Long, Double, Double, Timestamp>>forMonotonousTimestamps()
+                                .withTimestampAssigner((event, timestamp) -> event.f3.getTime())
+                );
+
         Table geoTable = tEnv.fromDataStream(geoStream, "id, long, alt, ts.rowtime, proc.proctime");
 
         tEnv.createTemporaryView("geo", geoTable);
@@ -63,12 +63,12 @@ public class ScalarFunctionExample {
 
         DataStream<Tuple4<Long, String, String, Timestamp>> geoStrStream = env
                 .fromCollection(geoStrList)
-                .assignTimestampsAndWatermarks(new AscendingTimestampExtractor<Tuple4<Long, String, String, Timestamp>>() {
-                    @Override
-                    public long extractAscendingTimestamp(Tuple4<Long, String, String, Timestamp> element) {
-                        return element.f3.getTime();
-                    }
-                });
+                .assignTimestampsAndWatermarks(
+                        WatermarkStrategy
+                                .<Tuple4<Long, String, String, Timestamp>>forMonotonousTimestamps()
+                                .withTimestampAssigner((event, timestamp) -> event.f3.getTime())
+                );
+
         Table geoStrTable = tEnv.fromDataStream(geoStrStream, "id, long, alt, ts.rowtime, proc.proctime");
 
         tEnv.createTemporaryView("geo_str", geoStrTable);

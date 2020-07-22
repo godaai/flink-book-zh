@@ -1,10 +1,10 @@
 package com.flink.tutorials.java.chapter8;
 
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
@@ -34,12 +34,12 @@ public class SystemFunctionExample {
 
         DataStream<Tuple4<Long, Long, String, Timestamp>> userBehaviorStream = env
                 .fromCollection(userBehaviorData)
-                .assignTimestampsAndWatermarks(new AscendingTimestampExtractor<Tuple4<Long, Long, String, Timestamp>>() {
-                    @Override
-                    public long extractAscendingTimestamp(Tuple4<Long, Long, String, Timestamp> element) {
-                        return element.f3.getTime();
-                    }
-                });
+                .assignTimestampsAndWatermarks(
+                        WatermarkStrategy
+                                .<Tuple4<Long, Long, String, Timestamp>>forMonotonousTimestamps()
+                                .withTimestampAssigner((event, timestamp) -> event.f3.getTime())
+                );
+
         Table userBehaviorTable = tEnv.fromDataStream(userBehaviorStream, "user_id, item_id, behavior,ts.rowtime");
 
         tEnv.createTemporaryView("user_behavior", userBehaviorTable);

@@ -1,13 +1,13 @@
 package com.flink.tutorials.java.chapter5;
 
-import com.flink.tutorials.java.utils.stock.StockSource;
 import com.flink.tutorials.java.utils.stock.StockPrice;
+import com.flink.tutorials.java.utils.stock.StockSource;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
-import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.OutputTag;
 
@@ -23,12 +23,11 @@ public class SideOutputExample {
 
         DataStream<StockPrice> inputStream = env
                 .addSource(new StockSource("stock/stock-tick-20200108.csv"))
-                .assignTimestampsAndWatermarks(new AscendingTimestampExtractor<StockPrice>() {
-                    @Override
-                    public long extractAscendingTimestamp(StockPrice stockPrice) {
-                        return stockPrice.ts;
-                    }
-                });
+                .assignTimestampsAndWatermarks(
+                        WatermarkStrategy
+                                .<StockPrice>forMonotonousTimestamps()
+                                .withTimestampAssigner((event, timestamp) -> event.ts)
+                );
 
         SingleOutputStreamOperator<String> mainStream = inputStream
                 .keyBy(stock -> stock.symbol)

@@ -1,12 +1,12 @@
 package com.flink.tutorials.java.chapter8;
 
 import com.flink.tutorials.java.chapter8.function.WeightedAvg;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
@@ -33,12 +33,11 @@ public class WeightedAggExample {
 
         DataStream<Tuple4<Integer, Long, Long, Timestamp>> stream = env
                 .fromCollection(list)
-                .assignTimestampsAndWatermarks(new AscendingTimestampExtractor<Tuple4<Integer, Long, Long, Timestamp>>() {
-                    @Override
-                    public long extractAscendingTimestamp(Tuple4<Integer, Long, Long, Timestamp> element) {
-                        return element.f3.getTime();
-                    }
-                });
+                .assignTimestampsAndWatermarks(
+                        WatermarkStrategy
+                                .<Tuple4<Integer, Long, Long, Timestamp>>forMonotonousTimestamps()
+                                .withTimestampAssigner((event, timestamp) -> event.f3.getTime())
+                );
 
         Table table = tEnv.fromDataStream(stream, "id, v, w, ts.rowtime");
 

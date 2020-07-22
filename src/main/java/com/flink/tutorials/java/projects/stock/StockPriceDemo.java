@@ -1,7 +1,7 @@
 package com.flink.tutorials.java.projects.stock;
 
-import com.flink.tutorials.java.utils.stock.StockSource;
 import com.flink.tutorials.java.utils.stock.StockPrice;
+import com.flink.tutorials.java.utils.stock.StockSource;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;

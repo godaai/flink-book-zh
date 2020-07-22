@@ -2,6 +2,7 @@ package com.flink.tutorials.java.chapter5;
 
 import com.flink.tutorials.java.utils.stock.StockPrice;
 import com.flink.tutorials.java.utils.stock.StockSource;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.Types;
@@ -11,7 +12,6 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
-import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.OutputTag;
 
@@ -31,26 +31,25 @@ public class ProcessFunctionExample {
         // 读入数据流
         DataStream<StockPrice> inputStream = env
                 .addSource(new StockSource("stock/stock-tick-20200108.csv"))
-                .assignTimestampsAndWatermarks(new AscendingTimestampExtractor<StockPrice>() {
-                    @Override
-                    public long extractAscendingTimestamp(StockPrice stockPrice) {
-                        return stockPrice.ts;
-                    }
-                });
+                .assignTimestampsAndWatermarks(
+                        WatermarkStrategy
+                                .<StockPrice>forMonotonousTimestamps()
+                                .withTimestampAssigner((event, timestamp) -> event.ts)
+                );
 
         DataStream<String> warnings = inputStream
                 .keyBy(stock -> stock.symbol)
                 // 调用process函数
                 .process(new IncreaseAlertFunction(3000));
 
-//        warnings.print();
+        warnings.print();
 
         OutputTag<StockPrice> outputTag = new OutputTag<StockPrice>("high-volume-trade") {};
 
         SingleOutputStreamOperator<StockPrice> mainDataStream = (SingleOutputStreamOperator)inputStream;
         DataStream<StockPrice>sideOutputStream = mainDataStream.getSideOutput(outputTag);
 
-        sideOutputStream.print();
+//        sideOutputStream.print();
 
         env.execute("process function");
     }

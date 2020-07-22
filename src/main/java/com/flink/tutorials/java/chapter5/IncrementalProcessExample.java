@@ -1,12 +1,9 @@
 package com.flink.tutorials.java.chapter5;
 
-import akka.stream.impl.fusing.Reduce;
 import com.flink.tutorials.java.utils.stock.StockPrice;
 import com.flink.tutorials.java.utils.stock.StockSource;
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.typeinfo.Types;
-import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
