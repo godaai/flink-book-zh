@@ -16,7 +16,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
-public class WeightedAggExample {
+public class AggFuncExample {
 
     public static void main(String[] args) throws Exception {
 

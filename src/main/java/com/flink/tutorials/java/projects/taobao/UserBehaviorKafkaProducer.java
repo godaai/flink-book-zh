@@ -13,6 +13,14 @@ import java.time.Instant;
 import java.util.Properties;
 import java.util.function.Consumer;
 
+/**
+ * 生成一个user_behavior Kafka数据流，可供下游Flink消费，生成JSON格式
+ * 用户需先启动Kafka集群
+ * 然后启动本进程：java -classpath ./target/flink-tutorials-0.1.jar com.flink.tutorials.java.projects.taobao.UserBehaviorKafkaProducer --input ./src/main/resources/taobao/UserBehavior-test.csv --output kafka localhost:9092
+ * --input 指定UserBehavior.csv文件
+ * --output 指定Kafka参数
+ * */
+
 public class UserBehaviorKafkaProducer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(UserBehaviorKafkaProducer.class);

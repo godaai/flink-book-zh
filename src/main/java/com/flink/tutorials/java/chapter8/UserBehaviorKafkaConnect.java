@@ -30,7 +30,7 @@ public class UserBehaviorKafkaConnect {
                 new Kafka()
                 .version("universal")     // 必填，合法的参数有"0.8", "0.9", "0.10", "0.11"或"universal"
                 .topic("user_behavior")   // 必填，Topic名
-                .startFromLatest()        // 首次消费时数据读取的位置
+                .startFromEarliest()        // 首次消费时数据读取的位置
                 .property("zookeeper.connect", "localhost:2181")  // Kafka连接参数
                 .property("bootstrap.servers", "localhost:9092")
             )
@@ -49,14 +49,18 @@ public class UserBehaviorKafkaConnect {
             // 临时表的表名，后续可以在SQL语句中使用这个表名
             .createTemporaryTable("user_behavior");
 
-        Table tumbleGroupByUserId = tEnv.sqlQuery("SELECT \n" +
-                "\tuser_id, \n" +
-                "\tCOUNT(behavior) AS behavior_cnt, \n" +
-                "\tTUMBLE_END(ts, INTERVAL '10' SECOND) AS end_ts \n" +
-                "FROM user_behavior\n" +
-                "GROUP BY user_id, TUMBLE(ts, INTERVAL '10' SECOND)");
-        DataStream<Tuple2<Boolean, Row>> result = tEnv.toRetractStream(tumbleGroupByUserId, Row.class);
-        result.print();
+        Table all = tEnv.sqlQuery("SELECT * FROM user_behavior");
+        DataStream<Tuple2<Boolean, Row>> allResult = tEnv.toRetractStream(all, Row.class);
+        allResult.print();
+
+//        Table tumbleGroupByUserId = tEnv.sqlQuery("SELECT \n" +
+//                "\tuser_id, \n" +
+//                "\tCOUNT(behavior) AS behavior_cnt, \n" +
+//                "\tTUMBLE_END(ts, INTERVAL '10' SECOND) AS end_ts \n" +
+//                "FROM user_behavior\n" +
+//                "GROUP BY user_id, TUMBLE(ts, INTERVAL '10' SECOND)");
+//        DataStream<Tuple2<Boolean, Row>> result = tEnv.toRetractStream(tumbleGroupByUserId, Row.class);
+//        result.print();
 
         env.execute("table api");
     }

@@ -41,20 +41,6 @@ public class SalesFromDataStream {
                 "ORDER BY ts " +
                 "ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)");
 
-        Table sales = tEnv.sqlQuery("SELECT " +
-                "item_id, " +
-                "SUM(sales) AS sales_sum, " +
-                "TUMBLE_END(ts, INTERVAL '10' SECOND) AS end_ts " +
-                "FROM sales " +
-                "GROUP BY item_id, TUMBLE(ts, INTERVAL '10' SECOND)");
-
-//        Table topN = tEnv.sqlQuery(
-//                "SELECT * " +
-//                        "FROM (" +
-//                        "   SELECT *," +
-//                        "       ROW_NUMBER() OVER (PARTITION BY category_id ORDER BY sales DESC) as row_num" +
-//                        "   FROM sales)" +
-//                        "WHERE row_num <= 3");
         DataStream<Tuple2<Boolean, Row>> result = tEnv.toRetractStream(windowSum, Row.class);
         result.print();
 

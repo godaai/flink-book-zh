@@ -16,7 +16,7 @@ public class IoTSQLDemo {
 
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
-        tEnv.sqlUpdate("CREATE TABLE sensor (\n" +
+        tEnv.executeSql("CREATE TABLE sensor (\n" +
                 "  room STRING,\n" +
                 "  node_id BIGINT,\n" +
                 "  temp FLOAT,\n" +
@@ -30,7 +30,7 @@ public class IoTSQLDemo {
                 "  'format.type' = 'csv' -- 必填\n" +
                 ")");
 
-        tEnv.sqlUpdate("CREATE TABLE env (\n" +
+        tEnv.executeSql("CREATE TABLE env (\n" +
                 "  room STRING,\n" +
                 "  occupant INT,\n" +
                 "  activity INT,\n" +
@@ -46,7 +46,7 @@ public class IoTSQLDemo {
 
         Table e = tEnv.sqlQuery("SELECT * FROM env");
 
-        tEnv.sqlUpdate("CREATE TABLE sensor_1min_avg (\n" +
+        tEnv.executeSql("CREATE TABLE sensor_1min_avg (\n" +
                 "  room STRING,\n" +
                 "  avg_temp FLOAT,\n" +
                 "  end_ts TIMESTAMP(3)\n" +
@@ -56,7 +56,7 @@ public class IoTSQLDemo {
                 "  'format.type' = 'csv' -- 必填\n" +
                 ")");
 
-        tEnv.sqlUpdate("CREATE TABLE sensor_env_data (\n" +
+        tEnv.executeSql("CREATE TABLE sensor_env_data (\n" +
                 "  room STRING,\n" +
                 "  node_id BIGINT,\n" +
                 "  temp FLOAT,\n" +
@@ -94,7 +94,7 @@ public class IoTSQLDemo {
                 "   sensor, LATERAL TABLE(env_table_func(sensor.ts)) AS latest_env\n" +
                 "WHERE sensor.room = latest_env.room";
 
-        tEnv.sqlUpdate(sqlQuery);
+        tEnv.executeSql(sqlQuery);
 //        DataStream<Row> result = tEnv.toAppendStream(joinResult, Row.class);
 //        result.print();
 

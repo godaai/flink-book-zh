@@ -32,15 +32,15 @@ public class SalesTopNExample {
 
         tEnv.createTemporaryView("sales", itemSalesTable);
 
-        Table topN = tEnv.sqlQuery("SELECT * FROM sales");
+//        Table topN = tEnv.sqlQuery("SELECT * FROM sales");
 
-//        Table topN = tEnv.sqlQuery(
-//                "SELECT * " +
-//                        "FROM (" +
-//                        "   SELECT *," +
-//                        "       ROW_NUMBER() OVER (PARTITION BY category_id ORDER BY sales DESC) as row_num" +
-//                        "   FROM sales)" +
-//                        "WHERE row_num <= 3");
+        Table topN = tEnv.sqlQuery(
+                "SELECT * " +
+                        "FROM (" +
+                        "   SELECT *," +
+                        "       ROW_NUMBER() OVER (PARTITION BY category_id ORDER BY sales DESC) as row_num" +
+                        "   FROM sales)" +
+                        "WHERE row_num <= 3");
         DataStream<Tuple2<Boolean, Row>> result = tEnv.toRetractStream(topN, Row.class);
         result.print();
 

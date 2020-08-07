@@ -6,6 +6,7 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.ExplainDetail;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.types.Row;
@@ -22,7 +23,7 @@ public class UserBehaviorFromKafkaSQLDDL {
 
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
-        tEnv.sqlUpdate("CREATE TABLE user_behavior (\n" +
+        tEnv.executeSql("CREATE TABLE user_behavior (\n" +
                 "    user_id BIGINT,\n" +
                 "    item_id BIGINT,\n" +
                 "    category_id BIGINT,\n" +
@@ -34,14 +35,18 @@ public class UserBehaviorFromKafkaSQLDDL {
                 "    'connector.type' = 'kafka',  -- 使用 kafka connector\n" +
                 "    'connector.version' = 'universal',  -- kafka 版本，universal 支持 0.11 以上的版本\n" +
                 "    'connector.topic' = 'user_behavior',  -- kafka topic\n" +
-                "    'connector.startup-mode' = 'latest-offset',  -- 从起始 offset 开始读取\n" +
+                "    'connector.startup-mode' = 'earliest-offset',  -- 从起始 offset 开始读取\n" +
                 "    'connector.properties.zookeeper.connect' = 'localhost:2181',  -- zookeeper 地址\n" +
                 "    'connector.properties.bootstrap.servers' = 'localhost:9092',  -- kafka broker 地址\n" +
                 "    'format.type' = 'json'  -- 数据源格式为 json\n" +
                 ")");
 
         Table groupByUserId = tEnv.sqlQuery("SELECT user_id, COUNT(behavior) AS behavior_cnt FROM user_behavior GROUP BY user_id");
-        String explanation = tEnv.explain(groupByUserId);
+        DataStream<Tuple2<Boolean, Row>> groupByUserIdResult = tEnv.toRetractStream(groupByUserId, Row.class);
+        groupByUserIdResult.print();
+
+        // 获取ExplainDetail
+        String explanation = groupByUserId.explain(ExplainDetail.CHANGELOG_MODE);
         System.out.println(explanation);
 
         Table tumbleGroupByUserId = tEnv.sqlQuery("SELECT \n" +
@@ -66,7 +71,8 @@ public class UserBehaviorFromKafkaSQLDDL {
                 "GROUP BY TUMBLE(rowtime, INTERVAL '20' SECOND), user_id");
 
         DataStream<Tuple2<Boolean, Row>> result = tEnv.toRetractStream(inlineGroupByUserId, Row.class);
-        result.print();
+        // 如需查看打印结果，可将注释打开
+        // result.print();
 
         env.execute("table api");
     }

@@ -9,8 +9,10 @@ import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.descriptors.Csv;
 import org.apache.flink.table.descriptors.FileSystem;
+import org.apache.flink.table.descriptors.Rowtime;
 import org.apache.flink.table.descriptors.Schema;
 import org.apache.flink.types.Row;
+
 
 public class UserBehaviorFromFile {
 
@@ -25,8 +27,15 @@ public class UserBehaviorFromFile {
                 .field("item_id", DataTypes.BIGINT())
                 .field("category", DataTypes.BIGINT())
                 .field("behavior", DataTypes.STRING())
-                .field("ts", DataTypes.BIGINT());
+                .field("ts", DataTypes.TIMESTAMP(3))
+                .rowtime(new Rowtime().timestampsFromField("ts").watermarksPeriodicBounded(1000));
 
+        String filePath = UserBehaviorFromFile.class
+                .getClassLoader().getResource("taobao/UserBehavior-test.csv")
+                .getPath();
+        System.out.println(filePath);
+
+        // connect()方法定义数据源未来将被废弃，以后主要使用SQL DDL
         tEnv.connect(new FileSystem().path("/Users/luweizheng/Projects/big-data/flink-tutorials/src/main/resources/taobao/UserBehavior-test.csv"))
         .withFormat(new Csv())
         .withSchema(schema)
@@ -43,7 +52,7 @@ public class UserBehaviorFromFile {
                 "GROUP BY user_id, TUMBLE(ts, INTERVAL '5' MINUTE)");
 
         DataStream<Tuple2<Boolean, Row>> result = tEnv.toRetractStream(tumbleGroupByUserId, Row.class);
-        result.print();
+//        result.print();
 
         env.execute("table api");
     }

@@ -49,11 +49,13 @@ public class ScalarFunctionExample {
 
         Table inFourRingTab = tEnv.sqlQuery("SELECT id FROM geo WHERE IsInFourRing(long, alt)");
         DataStream<Row> infourRingResult = tEnv.toAppendStream(inFourRingTab, Row.class);
-//        infourRingResult.print();
+        // 如需查看打印结果，可将注释打开
+        // infourRingResult.print();
 
         Table timeDiffTable = tEnv.sqlQuery("SELECT id, TimeDiff(ts, proc) FROM geo");
         DataStream<Row> timeDiffResult = tEnv.toAppendStream(timeDiffTable, Row.class);
-//        timeDiffResult.print();
+        // 如需查看打印结果，可将注释打开
+        // timeDiffResult.print();
 
         List<Tuple4<Long, String, String, Timestamp>> geoStrList = new ArrayList<>();
         geoStrList.add(Tuple4.of(1L, "116.2775", "39.91132", Timestamp.valueOf("2020-03-06 00:00:00")));
@@ -73,7 +75,7 @@ public class ScalarFunctionExample {
 
         tEnv.createTemporaryView("geo_str", geoStrTable);
         Table inFourRingStrTab = tEnv.sqlQuery("SELECT id FROM geo_str WHERE IsInFourRing(long, alt)");
-        DataStream<Row> infourRingStrResult = tEnv.toAppendStream(inFourRingTab, Row.class);
+        DataStream<Row> infourRingStrResult = tEnv.toAppendStream(inFourRingStrTab, Row.class);
         infourRingStrResult.print();
 
         env.execute("table api");

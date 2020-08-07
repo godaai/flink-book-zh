@@ -47,6 +47,8 @@ public class TableFunctionExample {
         // input_table与LATERAL TABLE(Func(str))进行JOIN
         Table tableFunc = tEnv.sqlQuery("SELECT id, s FROM input_table, LATERAL TABLE(Func(str)) AS T(s)");
         DataStream<Row> tableFuncResult = tEnv.toAppendStream(tableFunc, Row.class);
+        // 如需查看打印结果，可将注释打开
+        // infourRingResult.print();
 
         // input_table与LATERAL TABLE(Func(str))进行LEFT JOIN
         Table joinTableFunc = tEnv.sqlQuery("SELECT id, s FROM input_table LEFT JOIN LATERAL TABLE(Func(str)) AS T(s) ON TRUE");
