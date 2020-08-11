@@ -17,14 +17,14 @@ public class ReduceExample {
 
         // 实现ReduceFunction
         DataStream<Score> sumReduceFunctionStream = dataStream
-                .keyBy("name")
+                .keyBy(item -> item.name)
                 .reduce(new MyReduceFunction());
 
         sumReduceFunctionStream.print();
 
         // 使用 Lambda 表达式
         DataStream<Score> sumLambdaStream = dataStream
-                .keyBy("name")
+                .keyBy(item -> item.name)
                 .reduce((s1, s2) -> Score.of(s1.name, "Sum", s1.score + s2.score));
         sumLambdaStream.print();
 

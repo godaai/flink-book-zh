@@ -38,8 +38,9 @@ public class AllowLatenessExample {
                                 .withTimestampAssigner((event, timestamp) -> event.f1)
                 );
 
-        DataStream<Tuple4<String, String, Integer, String>> allowedLatenessStream = input.keyBy(item -> item.f0)
-        .timeWindow(Time.seconds(5))
+        DataStream<Tuple4<String, String, Integer, String>> allowedLatenessStream = input
+                .keyBy(item -> item.f0)
+                .timeWindow(Time.seconds(5))
                 .allowedLateness(Time.seconds(5))
                 .process(new AllowedLatenessFunction());
 

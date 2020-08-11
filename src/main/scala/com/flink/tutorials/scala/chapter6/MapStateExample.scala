@@ -1,11 +1,11 @@
-package com.flink.tutorials.scala.api.state
+package com.flink.tutorials.scala.api.chapter6
 
 import com.flink.tutorials.scala.utils.taobao.{UserBehavior, UserBehaviorSource}
+import org.apache.flink.api.common.eventtime.{SerializableTimestampAssigner, WatermarkStrategy}
 import org.apache.flink.api.common.functions.RichFlatMapFunction
 import org.apache.flink.api.common.state.{MapState, MapStateDescriptor}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.util.Collector
 
@@ -20,12 +20,13 @@ object MapStateExample {
     // 获取数据源
     val sourceStream: DataStream[UserBehavior] = env
       .addSource(new UserBehaviorSource("taobao/UserBehavior-20171201.csv"))
-      .assignTimestampsAndWatermarks(new AscendingTimestampExtractor[UserBehavior]() {
-      override def extractAscendingTimestamp(userBehavior: UserBehavior): Long = {
-        // 原始数据单位为秒，乘以1000转换成毫秒
-        userBehavior.timestamp * 1000
-      }
-    })
+      .assignTimestampsAndWatermarks(
+        WatermarkStrategy
+          .forMonotonousTimestamps()
+          .withTimestampAssigner(new SerializableTimestampAssigner[UserBehavior] {
+            override def extractTimestamp(t: UserBehavior, l: Long): Long = t.timestamp * 1000
+          })
+      )
 
     // 生成一个KeyedStream
     val keyedStream =  sourceStream.keyBy(user => user.userId)

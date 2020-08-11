@@ -1,4 +1,4 @@
-package com.flink.tutorials.scala.api.time
+package com.flink.tutorials.scala.api.chapter5
 
 import java.lang
 
@@ -8,7 +8,8 @@ import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows
 import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.util.Collector
-import collection.JavaConverters._
+
+import scala.collection.JavaConverters._
 
 object CoGroupExample {
 

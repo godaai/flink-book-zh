@@ -15,12 +15,12 @@ object ReduceExample {
 
     // 实现ReduceFunction
     val sumReduceFunctionStream: DataStream[Score] = dataStream
-      .keyBy("name")
+      .keyBy(item => item.name)
       .reduce(new MyReduceFunction)
 
     // 使用 Lambda 表达式
     val sumLambdaStream: DataStream[Score] = dataStream
-      .keyBy("name")
+      .keyBy(item => item.name)
       .reduce((s1, s2) => Score(s1.name, "Sum", s1.score + s2.score))
 
     senv.execute("basic reduce transformation")

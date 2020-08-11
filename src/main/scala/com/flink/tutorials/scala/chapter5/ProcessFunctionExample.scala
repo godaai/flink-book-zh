@@ -1,13 +1,13 @@
-package com.flink.tutorials.scala.api.time
+package com.flink.tutorials.scala.api.chapter5
 
 import java.text.SimpleDateFormat
 
 import com.flink.tutorials.scala.utils.stock.{StockPrice, StockSource}
+import org.apache.flink.api.common.eventtime.{SerializableTimestampAssigner, WatermarkStrategy}
 import org.apache.flink.api.common.state.{ValueState, ValueStateDescriptor}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction
-import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.util.Collector
 
@@ -25,12 +25,13 @@ object ProcessFunctionExample {
     // 读入数据流
     val inputStream: DataStream[StockPrice] = env
       .addSource(new StockSource("stock/stock-tick-20200108.csv"))
-      .assignTimestampsAndWatermarks(new AscendingTimestampExtractor[StockPrice]() {
-        override def extractAscendingTimestamp(stock: StockPrice): Long = {
-          stock.ts
-        }
-      }
-    )
+      .assignTimestampsAndWatermarks(
+        WatermarkStrategy
+          .forMonotonousTimestamps()
+          .withTimestampAssigner(new SerializableTimestampAssigner[StockPrice] {
+            override def extractTimestamp(t: StockPrice, l: Long): Long = t.ts
+          })
+      )
 
     val warnings: DataStream[String] = inputStream
       .keyBy(stock => stock.symbol)

@@ -1,11 +1,11 @@
-package com.flink.tutorials.scala.api.time
+package com.flink.tutorials.scala.api.chapter5
 
 import com.flink.tutorials.scala.utils.stock.{Media, MediaSource, StockPrice, StockSource}
+import org.apache.flink.api.common.eventtime.{SerializableTimestampAssigner, WatermarkStrategy}
 import org.apache.flink.api.common.state.{ValueState, ValueStateDescriptor}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.functions.co.KeyedCoProcessFunction
-import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.util.Collector
 
@@ -24,20 +24,33 @@ object KeyedCoProcessFunctionExample {
     // 读入股票数据流
     val stockStream: DataStream[StockPrice] = env
       .addSource(new StockSource("stock/stock-tick-20200108.csv"))
-      .assignTimestampsAndWatermarks(new AscendingTimestampExtractor[StockPrice]() {
-        override def extractAscendingTimestamp(stock: StockPrice): Long = {
-          stock.ts
-        }
-      })
+      .assignTimestampsAndWatermarks(
+        WatermarkStrategy
+          .forMonotonousTimestamps()
+          .withTimestampAssigner(new SerializableTimestampAssigner[StockPrice] {
+            override def extractTimestamp(t: StockPrice, l: Long): Long = t.ts
+          })
+      )
+
+//    // 读入股票数据流
+//    val stockStream: DataStream[StockPrice] = env
+//      .addSource(new StockSource("stock/stock-tick-20200108.csv"))
+//      .assignTimestampsAndWatermarks(new AscendingTimestampExtractor[StockPrice]() {
+//        override def extractAscendingTimestamp(stock: StockPrice): Long = {
+//          stock.ts
+//        }
+//      })
 
     // 读入媒体评价数据流
     val mediaStream: DataStream[Media] = env
       .addSource(new MediaSource)
-      .assignTimestampsAndWatermarks(new AscendingTimestampExtractor[Media]() {
-        override def extractAscendingTimestamp(media: Media): Long = {
-          media.ts
-        }
-      })
+      .assignTimestampsAndWatermarks(
+        WatermarkStrategy
+          .forMonotonousTimestamps()
+          .withTimestampAssigner(new SerializableTimestampAssigner[Media] {
+            override def extractTimestamp(t: Media, l: Long): Long = t.ts
+          })
+      )
 
     val joinStream: DataStream[StockPrice] = stockStream.connect(mediaStream)
       .keyBy(0, 0)

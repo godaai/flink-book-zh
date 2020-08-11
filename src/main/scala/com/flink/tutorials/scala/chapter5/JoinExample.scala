@@ -1,4 +1,4 @@
-package com.flink.tutorials.scala.api.time
+package com.flink.tutorials.scala.api.chapter5
 
 import org.apache.flink.api.common.functions.JoinFunction
 import org.apache.flink.streaming.api.TimeCharacteristic

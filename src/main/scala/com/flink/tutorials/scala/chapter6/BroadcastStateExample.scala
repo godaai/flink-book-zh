@@ -1,13 +1,13 @@
-package com.flink.tutorials.scala.api.state
+package com.flink.tutorials.scala.api.chapter6
 
 
 import com.flink.tutorials.scala.utils.taobao.{BehaviorPattern, UserBehavior, UserBehaviorSource}
+import org.apache.flink.api.common.eventtime.{SerializableTimestampAssigner, WatermarkStrategy}
 import org.apache.flink.api.common.state.{BroadcastState, MapStateDescriptor, ValueState, ValueStateDescriptor}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.datastream.BroadcastStream
 import org.apache.flink.streaming.api.functions.co.KeyedBroadcastProcessFunction
-import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.util.Collector
 
@@ -21,12 +21,14 @@ object BroadcastStateExample {
 
     // 获取数据源
     val userBehaviorStream: DataStream[UserBehavior] = env
-      .addSource(new UserBehaviorSource("taobao/UserBehavior-20171201.csv")).assignTimestampsAndWatermarks(new AscendingTimestampExtractor[UserBehavior]() {
-      override def extractAscendingTimestamp(userBehavior: UserBehavior): Long = {
-        // 原始数据单位为秒，乘以1000转换成毫秒
-        userBehavior.timestamp * 1000
-      }
-    })
+      .addSource(new UserBehaviorSource("taobao/UserBehavior-20171201.csv"))
+      .assignTimestampsAndWatermarks(
+        WatermarkStrategy
+          .forMonotonousTimestamps()
+          .withTimestampAssigner(new SerializableTimestampAssigner[UserBehavior] {
+            override def extractTimestamp(t: UserBehavior, l: Long): Long = t.timestamp * 1000
+          })
+      )
 
     // BehaviorPattern数据流
     val patternStream: DataStream[BehaviorPattern] = env.fromElements(BehaviorPattern("pv", "buy"))

@@ -1,15 +1,16 @@
-package com.flink.tutorials.scala.api.time
+package com.flink.tutorials.scala.api.chapter5
 
 import java.text.SimpleDateFormat
+import java.time.Duration
 import java.util.Calendar
 
+import org.apache.flink.api.common.eventtime.{SerializableTimestampAssigner, WatermarkStrategy}
 import org.apache.flink.api.common.functions.AggregateFunction
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.api.scala.typeutils.Types
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.functions.source.RichSourceFunction
 import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext
-import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.scala.function.ProcessWindowFunction
 import org.apache.flink.streaming.api.windowing.time.Time
@@ -32,11 +33,13 @@ object LateExample {
     // 数据流有三个字段：（key, 时间戳, 数值）
     val input: DataStream[(String, Long, Int)] = senv
       .addSource(new MySource)
-      .assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor[(String, Long, Int)](Time.seconds(5)) {
-        override def extractTimestamp(element: (String, Long, Int)): Long = {
-          element._2
-        }
-      })
+      .assignTimestampsAndWatermarks(
+        WatermarkStrategy
+          .forBoundedOutOfOrderness(Duration.ofSeconds(5))
+          .withTimestampAssigner(new SerializableTimestampAssigner[(String, Long, Int)] {
+            override def extractTimestamp(t: (String, Long, Int), l: Long): Long = t._2
+          })
+      )
 
     val mainStream = input.keyBy(item => item._1)
         .timeWindow(Time.seconds(5))
@@ -45,10 +48,12 @@ object LateExample {
         .aggregate(new CountAggregate)
 
     // 接受late-elements，形成一个数据流
-    val lateStream: DataStream[(String, Long, Int)] = mainStream.getSideOutput(new OutputTag[(String, Long, Int)]("late-elements"))
+    val lateStream: DataStream[(String, Long, Int)] = mainStream
+      .getSideOutput(new OutputTag[(String, Long, Int)]("late-elements"))
 
-//    mainStream.print()
-//    lateStream.print()
+    // 如需查看打印结果，可将注释打开
+    // mainStream.print()
+    // lateStream.print()
 
     val allowedLatenessStream: DataStream[(String, String, Int, String)] = input.keyBy(item => item._1)
         .timeWindow(Time.seconds(5))

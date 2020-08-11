@@ -1,6 +1,6 @@
-package com.flink.tutorials.scala.api.time
+package com.flink.tutorials.scala.api.chapter5
 
-import com.flink.tutorials.scala.api.time.AggregateFunctionExample.AverageAggregate
+import com.flink.tutorials.scala.api.chapter5.AggregateFunctionExample.AverageAggregate
 import com.flink.tutorials.scala.utils.stock.{StockPrice, StockSource}
 import org.apache.flink.api.common.state.{ValueState, ValueStateDescriptor}
 import org.apache.flink.streaming.api.TimeCharacteristic

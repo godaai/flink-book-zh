@@ -1,19 +1,5 @@
 package com.flink.tutorials.scala.projects.stock
 
-import java.util.Calendar
-
-import com.flink.tutorials.scala.projects.stock.StockPriceDemo.StockPriceTimeAssigner
-import com.flink.tutorials.scala.utils.stock.{StockPrice, StockSource}
-import org.apache.flink.configuration.Configuration
-import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction
-import org.apache.flink.streaming.api.functions.source.RichSourceFunction
-import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext
-import org.apache.flink.streaming.api.scala._
-import org.apache.flink.util.Collector
-
-import scala.util.Random
-
 /*
 
 object StockMediaConnectedDemo {

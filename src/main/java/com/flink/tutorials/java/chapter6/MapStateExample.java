@@ -2,6 +2,7 @@ package com.flink.tutorials.java.chapter6;
 
 import com.flink.tutorials.java.utils.taobao.UserBehavior;
 import com.flink.tutorials.java.utils.taobao.UserBehaviorSource;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
@@ -12,7 +13,6 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor;
 import org.apache.flink.util.Collector;
 
 public class MapStateExample {
@@ -27,13 +27,11 @@ public class MapStateExample {
 //        env.setStateBackend(stateBackend);
 
         DataStream<UserBehavior> userBehaviorStream = env.addSource(new UserBehaviorSource("taobao/UserBehavior-20171201.csv"))
-                .assignTimestampsAndWatermarks(new AscendingTimestampExtractor<UserBehavior>() {
-                    @Override
-                    public long extractAscendingTimestamp(UserBehavior userBehavior) {
-                        // 原始数据单位为秒，乘以1000转换成毫秒
-                        return userBehavior.timestamp * 1000;
-                    }
-                });
+                .assignTimestampsAndWatermarks(
+                        WatermarkStrategy
+                                .<UserBehavior>forMonotonousTimestamps()
+                                .withTimestampAssigner((event, timestamp) -> event.timestamp * 1000)
+                );
 
         // 生成一个KeyedStream
         KeyedStream<UserBehavior, Long> keyedStream =  userBehaviorStream.keyBy(user -> user.userId);
