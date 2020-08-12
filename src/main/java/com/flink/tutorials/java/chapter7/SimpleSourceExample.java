@@ -18,6 +18,7 @@ public class SimpleSourceExample {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(2, conf);
         DataStream<Tuple2<String, Integer>> countStream = env.addSource(new SimpleSource());
         System.out.println("parallelism: " + env.getParallelism());
+
         countStream.print();
         env.execute("source");
     }

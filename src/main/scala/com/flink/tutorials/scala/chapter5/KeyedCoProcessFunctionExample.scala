@@ -32,15 +32,6 @@ object KeyedCoProcessFunctionExample {
           })
       )
 
-//    // 读入股票数据流
-//    val stockStream: DataStream[StockPrice] = env
-//      .addSource(new StockSource("stock/stock-tick-20200108.csv"))
-//      .assignTimestampsAndWatermarks(new AscendingTimestampExtractor[StockPrice]() {
-//        override def extractAscendingTimestamp(stock: StockPrice): Long = {
-//          stock.ts
-//        }
-//      })
-
     // 读入媒体评价数据流
     val mediaStream: DataStream[Media] = env
       .addSource(new MediaSource)

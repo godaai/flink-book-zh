@@ -25,7 +25,7 @@ public class UserBehaviorKafkaConnect {
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
         tEnv
-            // 使用connect函数连接外部系统
+            // 使用connect函数连接外部系统 connect将被废弃
             .connect(
                 new Kafka()
                 .version("universal")     // 必填，合法的参数有"0.8", "0.9", "0.10", "0.11"或"universal"

@@ -1,5 +1,8 @@
 package com.flink.tutorials.scala.api.chapter5
 
+import java.time.Duration
+
+import org.apache.flink.api.common.eventtime.{SerializableTimestampAssigner, WatermarkGenerator, WatermarkGeneratorSupplier, WatermarkStrategy}
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.functions.co.ProcessJoinFunction
 import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor
@@ -27,11 +30,12 @@ object IntervalJoinExample {
         }
       }
     }.assignTimestampsAndWatermarks(
-      new BoundedOutOfOrdernessTimestampExtractor[(String, Long, Int)](Time.seconds(1)) {
-        override def extractTimestamp(element: (String, Long, Int)): Long = {
-          element._2
-        }
-      })
+      WatermarkStrategy
+        .forBoundedOutOfOrderness(Duration.ofSeconds(1))
+        .withTimestampAssigner(new SerializableTimestampAssigner[(String, Long, Int)] {
+          override def extractTimestamp(t: (String, Long, Int), l: Long): Long = t._2
+        })
+    )
 
     val input2: DataStream[(String, Long, Int)] = socketSource2.flatMap {
       (line: String, out: Collector[(String, Long, Int)]) => {
@@ -41,11 +45,12 @@ object IntervalJoinExample {
         }
       }
     }.assignTimestampsAndWatermarks(
-      new BoundedOutOfOrdernessTimestampExtractor[(String, Long, Int)](Time.seconds(1)) {
-        override def extractTimestamp(element: (String, Long, Int)): Long = {
-          element._2
-        }
+      WatermarkStrategy
+        .forBoundedOutOfOrderness(Duration.ofSeconds(1))
+        .withTimestampAssigner(new SerializableTimestampAssigner[(String, Long, Int)] {
+        override def extractTimestamp(t: (String, Long, Int), l: Long): Long = t._2
       })
+    )
 
     val intervalJoinResult: DataStream[String] = input1.keyBy(_._1)
       .intervalJoin(input2.keyBy(_._1))

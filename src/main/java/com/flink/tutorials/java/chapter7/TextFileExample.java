@@ -22,11 +22,18 @@ public class TextFileExample {
         TextInputFormat textInputFormat = new TextInputFormat(new org.apache.flink.core.fs.Path(filePath));
 
         // 每隔100毫秒检测一遍
-//        DataStream<String> inputStream = env.readFile(textInputFormat, filePath,
-//                FileProcessingMode.PROCESS_CONTINUOUSLY, 100);
+//        DataStream<String> inputStream = env.readFile(
+//                textInputFormat,
+//                filePath,
+//                FileProcessingMode.PROCESS_CONTINUOUSLY,
+//                100);
 
-        DataStream<String> readOnceStream = env.readFile(textInputFormat, filePath,
-                FileProcessingMode.PROCESS_ONCE, 0);
+        // 只读一次
+        DataStream<String> readOnceStream = env.readFile(
+                textInputFormat,
+                filePath,
+                FileProcessingMode.PROCESS_ONCE,
+                0);
 
         StreamingFileSink<String> fileSink = StreamingFileSink
                 .forRowFormat(new Path(filePath + "output-test"),

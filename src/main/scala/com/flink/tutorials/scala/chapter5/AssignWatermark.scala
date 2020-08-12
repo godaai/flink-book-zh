@@ -29,16 +29,18 @@ object AssignWatermark {
     // 使用下面的方式，部分Intellij需要在设置中添加 -target:jvm-1.8
     // Preferences -> Build, Execution, Deployment -> Compiler -> Scala Compiler -> Default / Maven工程
     // Additional compiler options 行添加参数: -target:jvm-1.8
-    val periodWatermark: DataStream[(String, Long)] = input.assignTimestampsAndWatermarks(
-      WatermarkStrategy.forGenerator[(String, Long)](
-        new WatermarkGeneratorSupplier[(String, Long)] {
-          override def createWatermarkGenerator(context: WatermarkGeneratorSupplier.Context): WatermarkGenerator[(String, Long)] =
-            new MyPeriodicGenerator
-        }
-      ).withTimestampAssigner(new SerializableTimestampAssigner[(String, Long)] {
-          override def extractTimestamp(t: (String, Long), l: Long): Long = t._2
-        })
-    )
+    val periodWatermark: DataStream[(String, Long)] = input
+      .assignTimestampsAndWatermarks(
+        WatermarkStrategy
+          .forGenerator[(String, Long)](
+            new WatermarkGeneratorSupplier[(String, Long)] {
+              override def createWatermarkGenerator(context: WatermarkGeneratorSupplier.Context): WatermarkGenerator[(String, Long)] =
+                new MyPeriodicGenerator
+          }
+          ).withTimestampAssigner(new SerializableTimestampAssigner[(String, Long)] {
+            override def extractTimestamp(t: (String, Long), l: Long): Long = t._2
+          })
+      )
 
     periodWatermark.print()
 

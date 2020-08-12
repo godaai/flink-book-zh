@@ -76,7 +76,7 @@ public class TransactionWriteSinkExample {
             // 创建一个存储本次事务的文件
             Files.createFile(preCommitFilePath);
             transactionWriter = Files.newBufferedWriter(preCommitFilePath);
-            System.out.println("ransaction File: " + preCommitFilePath);
+            System.out.println("Transaction File: " + preCommitFilePath);
 
             return fileName;
         }

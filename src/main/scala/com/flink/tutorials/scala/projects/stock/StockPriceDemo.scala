@@ -1,6 +1,7 @@
 package com.flink.tutorials.scala.projects.stock
 
 import com.flink.tutorials.scala.utils.stock.{StockPrice, StockSource}
+import org.apache.flink.api.common.eventtime.{SerializableTimestampAssigner, WatermarkStrategy}
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor
 import org.apache.flink.streaming.api.scala._
@@ -22,7 +23,14 @@ object StockPriceDemo {
     val stockPriceRawStream: DataStream[StockPrice] = env
       .addSource(new StockSource("stock/stock-tick-20200108.csv"))
       // 设置 Timestamp 和 Watermark
-      .assignTimestampsAndWatermarks(new StockPriceTimeAssigner)
+      .assignTimestampsAndWatermarks(
+        WatermarkStrategy
+          .forMonotonousTimestamps()
+          .withTimestampAssigner(new SerializableTimestampAssigner[StockPrice] {
+            override def extractTimestamp(t: StockPrice, l: Long): Long = t.ts
+            }
+          )
+      )
 
     val stockPriceStream: DataStream[StockPrice] = stockPriceRawStream
       .keyBy(_.symbol)
@@ -36,10 +44,6 @@ object StockPriceDemo {
 
     // 执行程序
     env.execute("Compute max stock price")
-  }
-
-  class StockPriceTimeAssigner extends BoundedOutOfOrdernessTimestampExtractor[StockPrice](Time.seconds(5)) {
-    override def extractTimestamp(t: StockPrice): Long = t.ts
   }
 
 }
