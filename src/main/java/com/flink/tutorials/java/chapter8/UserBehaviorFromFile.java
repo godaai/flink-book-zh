@@ -22,6 +22,7 @@ public class UserBehaviorFromFile {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         StreamTableEnvironment tEnv = StreamTableEnvironment.create(env, fsSettings);
 
+        // Flink .rowtime() 定义时间戳的方法有bug，本方法将在未来版本废弃
         Schema schema = new Schema()
                 .field("user_id", DataTypes.BIGINT())
                 .field("item_id", DataTypes.BIGINT())
@@ -33,10 +34,9 @@ public class UserBehaviorFromFile {
         String filePath = UserBehaviorFromFile.class
                 .getClassLoader().getResource("taobao/UserBehavior-test.csv")
                 .getPath();
-        System.out.println(filePath);
 
         // connect()方法定义数据源未来将被废弃，以后主要使用SQL DDL
-        tEnv.connect(new FileSystem().path("/Users/luweizheng/Projects/big-data/flink-tutorials/src/main/resources/taobao/UserBehavior-test.csv"))
+        tEnv.connect(new FileSystem().path(filePath))
         .withFormat(new Csv())
         .withSchema(schema)
         .createTemporaryTable("user_behavior");
@@ -52,7 +52,8 @@ public class UserBehaviorFromFile {
                 "GROUP BY user_id, TUMBLE(ts, INTERVAL '5' MINUTE)");
 
         DataStream<Tuple2<Boolean, Row>> result = tEnv.toRetractStream(tumbleGroupByUserId, Row.class);
-//        result.print();
+        result.print();
+
 
         env.execute("table api");
     }

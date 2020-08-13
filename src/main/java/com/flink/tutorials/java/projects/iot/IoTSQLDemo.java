@@ -1,10 +1,12 @@
 package com.flink.tutorials.java.projects.iot;
 
 import org.apache.flink.streaming.api.TimeCharacteristic;
+import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+import org.apache.flink.types.Row;
 
 public class IoTSQLDemo {
 
@@ -16,6 +18,14 @@ public class IoTSQLDemo {
 
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
+        String sensorFilePath = IoTSQLDemo.class
+                .getClassLoader().getResource("iot/sensor.csv")
+                .getPath();
+
+        String envFilePath = IoTSQLDemo.class
+                .getClassLoader().getResource("iot/env.csv")
+                .getPath();
+
         tEnv.executeSql("CREATE TABLE sensor (\n" +
                 "  room STRING,\n" +
                 "  node_id BIGINT,\n" +
@@ -26,7 +36,7 @@ public class IoTSQLDemo {
                 "  WATERMARK FOR ts as ts - INTERVAL '5' SECOND" +
                 ") WITH (\n" +
                 "  'connector.type' = 'filesystem',  -- 必填\n" +
-                "  'connector.path' = 'file:///Users/luweizheng/Projects/big-data/data-preprocess/iot/sensor.csv',  -- 必填\n" +
+                "  'connector.path' = '" + sensorFilePath + "',  -- 必填\n" +
                 "  'format.type' = 'csv' -- 必填\n" +
                 ")");
 
@@ -40,7 +50,7 @@ public class IoTSQLDemo {
                 "  WATERMARK FOR ts as ts - INTERVAL '5' SECOND" +
                 ") WITH (\n" +
                 "  'connector.type' = 'filesystem',  -- 必填\n" +
-                "  'connector.path' = 'file:///Users/luweizheng/Projects/big-data/data-preprocess/iot/env.csv',  -- 必填\n" +
+                "  'connector.path' = '" + envFilePath + "',  -- 必填\n" +
                 "  'format.type' = 'csv' -- 必填\n" +
                 ")");
 
@@ -52,7 +62,7 @@ public class IoTSQLDemo {
                 "  end_ts TIMESTAMP(3)\n" +
                 ") WITH (\n" +
                 "  'connector.type' = 'filesystem',  -- 必填\n" +
-                "  'connector.path' = 'file:///Users/luweizheng/Projects/big-data/data-preprocess/iot/sensor_1min_avg.csv',  -- 必填\n" +
+                "  'connector.path' = 'file:///tmp/sensor_1min_avg.csv',  -- 必填\n" +
                 "  'format.type' = 'csv' -- 必填\n" +
                 ")");
 
@@ -65,17 +75,17 @@ public class IoTSQLDemo {
                 "  ts TIMESTAMP(3)\n" +
                 ") WITH (\n" +
                 "  'connector.type' = 'filesystem',  -- 必填\n" +
-                "  'connector.path' = 'file:///Users/luweizheng/Projects/big-data/data-preprocess/iot/sensor_env_data',  -- 必填\n" +
+                "  'connector.path' = 'file:///tmp/sensor_env_data',  -- 必填\n" +
                 "  'format.type' = 'csv' -- 必填\n" +
                 ")");
 
-//        tEnv.sqlUpdate("INSERT INTO sensor_1min_avg " +
-//                "SELECT " +
-//                "  room, " +
-//                "  AVG(temp) AS avg_temp," +
-//                "  TUMBLE_END(ts, INTERVAL '1' MINUTE) AS end_ts " +
-//                "FROM sensor " +
-//                "GROUP BY room, TUMBLE(ts, INTERVAL '1' MINUTE)");
+        tEnv.executeSql("INSERT INTO sensor_1min_avg " +
+                "SELECT " +
+                "  room, " +
+                "  AVG(temp) AS avg_temp," +
+                "  TUMBLE_END(ts, INTERVAL '1' MINUTE) AS end_ts " +
+                "FROM sensor " +
+                "GROUP BY room, TUMBLE(ts, INTERVAL '1' MINUTE)");
 
         // 注册 Temporal Table Function
         tEnv.registerFunction(
@@ -95,9 +105,9 @@ public class IoTSQLDemo {
                 "WHERE sensor.room = latest_env.room";
 
         tEnv.executeSql(sqlQuery);
-//        DataStream<Row> result = tEnv.toAppendStream(joinResult, Row.class);
-//        result.print();
 
-        env.execute("table api");
+        // Flink 1.11之后更新了API，如果代码中没有任何DataStream API，且使用了executeSql()执行SQL
+        // 可以不使用execute()方法，因为executeSql()本身已经异步执行并返回一个JobResult
+        // env.execute("table api");
     }
 }
