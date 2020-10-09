@@ -35,7 +35,7 @@ object ProcessFunctionExample {
 
     val warnings: DataStream[String] = inputStream
       .keyBy(stock => stock.symbol)
-      // 调用process函数
+      // 调用process()函数
       .process(new IncreaseAlertFunction(10000))
 
     warnings.print()

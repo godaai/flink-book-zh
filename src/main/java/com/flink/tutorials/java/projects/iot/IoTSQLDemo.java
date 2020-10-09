@@ -5,6 +5,7 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
+import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.types.Row;
 
@@ -104,10 +105,13 @@ public class IoTSQLDemo {
                 "   sensor, LATERAL TABLE(env_table_func(sensor.ts)) AS latest_env\n" +
                 "WHERE sensor.room = latest_env.room";
 
-        tEnv.executeSql(sqlQuery);
+        // executeSql()是一个异步方法，会将计算任务提交
+        TableResult result = tEnv.executeSql(sqlQuery);
+        // 使用Intellij Idea调试，需要加上的代码，以等待result返回结果
+        result.getJobClient().get()
+                .getJobExecutionResult(Thread.currentThread().getContextClassLoader()).get();
 
-        // Flink 1.11之后更新了API，如果代码中没有任何DataStream API，且使用了executeSql()执行SQL
-        // 可以不使用execute()方法，因为executeSql()本身已经异步执行并返回一个JobResult
+        // 由于executeSql()已经将计算任务提交，因此无需execute()方法
         // env.execute("table api");
     }
 }

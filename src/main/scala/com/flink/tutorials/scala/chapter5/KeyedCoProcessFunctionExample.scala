@@ -45,7 +45,7 @@ object KeyedCoProcessFunctionExample {
 
     val joinStream: DataStream[StockPrice] = stockStream.connect(mediaStream)
       .keyBy(0, 0)
-      // 调用process函数
+      // 调用process()函数
       .process(new JoinStockMediaProcessFunction())
 
     joinStream.print()

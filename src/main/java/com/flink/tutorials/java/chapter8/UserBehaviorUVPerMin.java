@@ -39,7 +39,7 @@ public class UserBehaviorUVPerMin {
 
         Table groupByUserId = tEnv.sqlQuery("SELECT user_id, COUNT(behavior) AS behavior_cnt FROM user_behavior GROUP BY user_id");
 
-        String explanation = tEnv.explain(groupByUserId);
+        String explanation = groupByUserId.explain();
         System.out.println(explanation);
 
         Table simpleUv = tEnv.sqlQuery("" +

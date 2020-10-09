@@ -39,7 +39,7 @@ public class ProcessFunctionExample {
 
         DataStream<String> warnings = inputStream
                 .keyBy(stock -> stock.symbol)
-                // 调用process函数
+                // 调用process()函数
                 .process(new IncreaseAlertFunction(3000));
 
         warnings.print();

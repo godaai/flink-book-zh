@@ -44,7 +44,7 @@ public class KeyCoProcessFunctonExample {
 
         DataStream<StockPrice> joinStream = stockStream.connect(mediaStream)
                 .keyBy("symbol", "symbol")
-                // 调用process函数
+                // 调用process()函数
                 .process(new JoinStockMediaProcessFunction());
 
         joinStream.print();

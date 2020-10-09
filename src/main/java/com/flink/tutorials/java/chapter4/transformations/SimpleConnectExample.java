@@ -22,7 +22,7 @@ public class SimpleConnectExample {
         senv.execute("connect");
     }
 
-    // CoMapFunction三个泛型分别对应第一个流的输入、第二个流的输入，map之后的输出
+    // CoMapFunction三个泛型分别对应第一个流的输入、第二个流的输入，map()之后的输出
     public static class MyCoMapFunction implements CoMapFunction<Integer, String, String> {
 
         @Override

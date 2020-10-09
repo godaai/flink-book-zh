@@ -44,10 +44,12 @@ under the License.
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<flink.version>1.11.0</flink.version>
+		<flink.version>1.11.2</flink.version>
 		<scala.binary.version>2.11</scala.binary.version>
 		<scala.version>2.11.12</scala.version>
 		<log4j.version>2.13.3</log4j.version>
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.target>1.8</maven.compiler.target>
 	</properties>
 
 	<dependencies>
@@ -194,15 +196,32 @@ under the License.
 			<plugin>
 				<groupId>net.alchim31.maven</groupId>
 				<artifactId>scala-maven-plugin</artifactId>
-				<version>3.2.2</version>
+<!--				<version>3.2.2</version>-->
+				<configuration>
+					<args>
+						<arg>-target:jvm-1.8</arg>
+					</args>
+					<jvmArgs>
+						<arg>-Xss2m</arg>
+					</jvmArgs>
+				</configuration>
 				<executions>
 					<execution>
+						<id>scala-compile-first</id>
+						<phase>process-resources</phase>
 						<goals>
 							<goal>compile</goal>
-							<goal>testCompile</goal>
 						</goals>
 					</execution>
 				</executions>
+<!--				<executions>-->
+<!--					<execution>-->
+<!--						<goals>-->
+<!--							<goal>compile</goal>-->
+<!--							<goal>testCompile</goal>-->
+<!--						</goals>-->
+<!--					</execution>-->
+<!--				</executions>-->
 			</plugin>
 
 			<!-- Eclipse Scala Integration -->

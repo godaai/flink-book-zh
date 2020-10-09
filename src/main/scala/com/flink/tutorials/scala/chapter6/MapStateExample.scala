@@ -31,7 +31,7 @@ object MapStateExample {
     // 生成一个KeyedStream
     val keyedStream =  sourceStream.keyBy(user => user.userId)
 
-    // 在KeyedStream上进行flatMap
+    // 在KeyedStream上进行flatMap()
     val behaviorCountStream: DataStream[(Long, String, Int)] = keyedStream.flatMap(new MapStateFunction)
 
     behaviorCountStream.print()

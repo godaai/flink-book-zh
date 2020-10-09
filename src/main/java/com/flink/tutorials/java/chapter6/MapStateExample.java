@@ -36,7 +36,7 @@ public class MapStateExample {
         // 生成一个KeyedStream
         KeyedStream<UserBehavior, Long> keyedStream =  userBehaviorStream.keyBy(user -> user.userId);
 
-        // 在KeyedStream上进行flatMap
+        // 在KeyedStream上进行flatMap()
         DataStream<Tuple3<Long, String, Integer>> behaviorCountStream= keyedStream.flatMap(new MapStateFunction());
 
         behaviorCountStream.print();

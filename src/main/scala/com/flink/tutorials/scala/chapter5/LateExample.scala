@@ -121,7 +121,7 @@ object LateExample {
       val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
       if (isUpdated.value() == false) {
-        // 第一次使用process函数时， Boolean默认初始化为false，因此窗口函数第一次被调用时会进入这里
+        // 第一次使用process()函数时， Boolean默认初始化为false，因此窗口函数第一次被调用时会进入这里
         out.collect((key, format.format(Calendar.getInstance().getTime), count, "first"))
         isUpdated.update(true)
       } else {

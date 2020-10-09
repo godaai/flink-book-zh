@@ -24,7 +24,7 @@ public class AggregationExample {
         DataStream<Tuple3<Integer, Integer, Integer>> sumStream = tupleStream.keyBy(0).sum(1);
 //        sumStream.print();
 
-        // 按第一个字段分组，对第三个字段求最大值max，打印出来的结果如下：
+        // 按第一个字段分组，对第三个字段求最大值，使用max()，打印出来的结果如下：
         //  (0,0,0)
         //  (0,0,1)
         //  (0,0,2)
@@ -34,7 +34,7 @@ public class AggregationExample {
         DataStream<Tuple3<Integer, Integer, Integer>> maxStream = tupleStream.keyBy(0).max(2);
 //        maxStream.print();
 
-        // 按第一个字段分组，对第三个字段求最大值maxBy，打印出来的结果如下：
+        // 按第一个字段分组，对第三个字段求最大值，使用maxBy()，打印出来的结果如下：
         //  (0,0,0)
         //  (0,1,1)
         //  (0,2,2)

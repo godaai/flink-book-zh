@@ -20,7 +20,7 @@ object SimpleConnectExample {
 
   }
 
-  // CoMapFunction三个泛型分别对应第一个流的输入、第二个流的输入，map之后的输出
+  // CoMapFunction三个泛型分别对应第一个流的输入、第二个流的输入，map()之后的输出
   class MyCoMapFunction extends CoMapFunction[Int, String, String] {
 
     override def map1(input1: Int): String = input1.toString

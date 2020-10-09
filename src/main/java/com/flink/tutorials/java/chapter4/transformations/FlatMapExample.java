@@ -19,7 +19,7 @@ public class FlatMapExample {
         DataStream<String> dataStream = senv.fromElements("Hello World", "Hello this is Flink");
 
         // split函数的输入为 "Hello World" 输出为 "Hello" 和 "World" 组成的列表 ["Hello", "World"]
-        // flatMap将列表中每个元素提取出来
+        // flatMap()将列表中每个元素提取出来
         // 最后输出为 ["Hello", "World", "Hello", "this", "is", "Flink"]
         DataStream<String> words = dataStream.flatMap (
                 (String input, Collector<String> collector) -> {

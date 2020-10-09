@@ -31,7 +31,7 @@ public class SideOutputExample {
 
         SingleOutputStreamOperator<String> mainStream = inputStream
                 .keyBy(stock -> stock.symbol)
-                // 调用process函数，包含侧输出逻辑
+                // 调用process()函数，包含侧输出逻辑
                 .process(new SideOutputFunction());
 
         DataStream<StockPrice> sideOutputStream = mainStream.getSideOutput(highVolumeOutput);
