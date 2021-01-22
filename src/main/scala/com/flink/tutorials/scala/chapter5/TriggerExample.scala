@@ -67,7 +67,7 @@ object TriggerExample {
     }
 
     override def clear(window: TimeWindow, triggerContext: Trigger.TriggerContext): Unit = {
-      val lastPrice: ValueState[Double] = triggerContext.getPartitionedState(new ValueStateDescriptor[Double]("lastPrice", classOf[Double]))
+      val lastPrice: ValueState[Double] = triggerContext.getPartitionedState(new ValueStateDescriptor[Double]("lastPriceState", classOf[Double]))
       lastPrice.clear()
     }
   }
