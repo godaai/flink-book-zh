@@ -1,4 +1,6 @@
-# flink-tutorials
+# 《Flink原理与实践》配套源码
+
+![《Flink原理与实践》](./book.jpeg)
 
 麻烦路过的朋友给点个星星（star）,也算是对我分享的认可，谢谢了！
 
