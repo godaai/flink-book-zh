@@ -1,8 +1,8 @@
 # 《Flink原理与实践》配套源码
 
-![《Flink原理与实践》](./book.jpeg)
+《Flink原理与实践》已上线各大电商平台，书配合代码，学习效率更高。
 
-麻烦路过的朋友给点个星星（star）,也算是对我分享的认可，谢谢了！
+![《Flink原理与实践》](./book.jpeg)
 
 本工程主要使用Java和Scala演示如何使用Flink。用户需要安装Intellij Idea和Maven。
 
