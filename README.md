@@ -10,11 +10,13 @@ You can clone it and learn some basic ideas about Flink. I use Java and Scala to
 
 I also wrote a book (in Chinese) about Flink.
 
-![《Flink原理与实践》](./book.jpeg)
+---
 
-***
+《Flink原理与实践》已上线各大电商平台，书配合代码，学习效率更高。
 
 麻烦路过的朋友给点个星星（star）,也算是对我分享的认可，谢谢了！
+
+![《Flink原理与实践》](./book.jpeg)
 
 本工程主要使用Java和Scala演示如何使用Flink。用户需要安装Intellij Idea和Maven。
 
@@ -23,6 +25,7 @@ I also wrote a book (in Chinese) about Flink.
 大家也可以通过微信公众号找到我：
 
 ![公众号](http://aixingqiu-1258949597.cos.ap-beijing.myqcloud.com/2019-11-20-021810.png)
+
 
 ## Project Structure
 
@@ -37,3 +40,4 @@ I also wrote a book (in Chinese) about Flink.
 `chapter7_connector` gives example on Connector (Source and Sink).
 
 `chapter7_sql` shows Table API & SQL.
+
