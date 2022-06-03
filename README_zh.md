@@ -2,13 +2,17 @@
 
 ## 简介
 
+https://github.com/luweizheng/flink-tutorials
+
+我未来将更新到Flink最新版本。
+
 《Flink原理与实践》已上线各大电商平台，书配合代码，学习效率更高。
 
-麻烦路过的朋友给点个星星（star）,也算是对我分享的认可，谢谢了！
+麻烦路过的朋友给**点个星星（star）**,也算是对我分享的认可，谢谢了！
 
 ![《Flink原理与实践》](./book.jpeg)
 
-本工程主要使用Java和Scala演示如何使用Flink。用户需要安装Intellij Idea和Maven。
+本工程主要使用Java和Scala演示如何使用Flink（v1.11）。用户需要安装Intellij Idea和Maven。
 
 我的网站[http://lulaoshi.info/](https://lulaoshi.info/flink/)有对Flink的详细图文教程。
 
@@ -30,4 +34,6 @@
 `chapter7_connector` gives example on Connector (Source and Sink).
 
 `chapter7_sql` shows Table API & SQL.
+
+`exercise` are projects using Flink.
 

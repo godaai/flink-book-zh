@@ -4,6 +4,12 @@ import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
+/**
+ * This class shows different way to implement a `reduce()` transformation:
+ *    * lambda function
+ *    * implement ReduceFunction class
+ * */
+
 public class ReduceExample {
 
     public static void main(String[] args) throws Exception {
@@ -15,6 +21,7 @@ public class ReduceExample {
                 Score.of("Li", "Math", 85), Score.of("Wang", "Math", 92),
                 Score.of("Liu", "Math", 91), Score.of("Liu", "English", 87));
 
+        // implement ReduceFunction class
         // 实现ReduceFunction
         DataStream<Score> sumReduceFunctionStream = dataStream
                 .keyBy(item -> item.name)
@@ -22,6 +29,7 @@ public class ReduceExample {
 
         sumReduceFunctionStream.print();
 
+        // lambda function
         // 使用 Lambda 表达式
         DataStream<Score> sumLambdaStream = dataStream
                 .keyBy(item -> item.name)

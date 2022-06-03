@@ -6,11 +6,11 @@ public class TypeErasure {
     public static void main(String[] args) {
         Class<?> strListClass = new ArrayList<String>().getClass();
         Class<?> intListClass = new ArrayList<Integer>().getClass();
-        // 输出：class java.util.ArrayList
+        // The output of the following line: class java.util.ArrayList
         System.out.println(strListClass);
-        // 输出：class java.util.ArrayList
+        // The output of the following line: class java.util.ArrayList
         System.out.println(intListClass);
-        // 输出：true
+        // The output of the following line: true
         System.out.println(strListClass.equals(intListClass));
     }
 }

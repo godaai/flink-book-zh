@@ -2,7 +2,9 @@
 
 ## Introduction
 
-This is a Flink tutorial repo (https://github.com/luweizheng/flink-tutorials). 
+https://github.com/luweizheng/flink-tutorials
+
+This is a Flink(v1.11) tutorial repo. I will update to latest Flink version in the future.
 
 You can clone it and learn some basic ideas about Flink. I use Java and Scala to demonstrate how to use Flink. You need to install Intellij Idea and Maven in your local environment.
 
@@ -23,6 +25,8 @@ I also wrote a book (in Chinese) about Flink.
 `chapter7_connector` gives example on Connector (Source and Sink).
 
 `chapter7_sql` shows Table API & SQL.
+
+`exercise` are projects using Flink.
 
 ## Contact
 

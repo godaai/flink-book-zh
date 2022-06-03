@@ -1,4 +1,4 @@
-package com.flink.tutorials.scala.chapter2
+package com.flink.tutorials.scala.chapter2_basics
 
 object MyStackDemo {
 

@@ -1,4 +1,4 @@
-package com.flink.tutorials.scala.chapter7
+package com.flink.tutorials.scala.chapter7_checkpoint
 
 import java.io.BufferedWriter
 import java.nio.file.{Files, Path, Paths}

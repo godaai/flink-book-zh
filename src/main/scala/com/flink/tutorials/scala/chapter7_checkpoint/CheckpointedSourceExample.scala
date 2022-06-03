@@ -1,4 +1,4 @@
-package com.flink.tutorials.scala.chapter7
+package com.flink.tutorials.scala.chapter7_checkpoint
 
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.api.common.functions.MapFunction
