@@ -17,7 +17,7 @@
 ![公众号](http://aixingqiu-1258949597.cos.ap-beijing.myqcloud.com/2019-11-20-021810.png)
 
 
-## Project Structure
+## 目录结构
 
 `chapter2_basics` gives some basic examples on overloading, types, functional programming.
 
