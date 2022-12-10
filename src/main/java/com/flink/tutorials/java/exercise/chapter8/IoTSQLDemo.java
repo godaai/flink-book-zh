@@ -107,7 +107,7 @@ public class IoTSQLDemo {
         TableResult result = tEnv.executeSql(sqlQuery);
         // 使用Intellij Idea调试，需要加上的代码，以等待result返回结果
         result.getJobClient().get()
-                .getJobExecutionResult(Thread.currentThread().getContextClassLoader()).get();
+                .getJobExecutionResult().get();
 
         // 由于executeSql()已经将计算任务提交，因此无需execute()方法
         // env.execute("table api");

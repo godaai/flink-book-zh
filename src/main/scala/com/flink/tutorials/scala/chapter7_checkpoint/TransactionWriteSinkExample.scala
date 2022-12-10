@@ -41,7 +41,7 @@ object TransactionWriteSinkExample {
     // 缓存
     var transactionWriter: BufferedWriter = _
 
-    override def invoke(transaction: String, in: (String, Int), context: SinkFunction.Context[_]): Unit = {
+    override def invoke(transaction: String, in: (String, Int), context: SinkFunction.Context): Unit = {
       transactionWriter.write(in._1 + " " + in._2 + "\n")
     }
 
