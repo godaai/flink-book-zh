@@ -10,7 +10,8 @@ You can clone it and learn some basic ideas about Flink. I use Java and Scala to
 
 **Please star this repo** if you find it useful.
 
-I also wrote a book (in Chinese) about Flink.
+I also wrote a book (in Chinese) about Flink. 👉 [jd.com](https://item.jd.com/13154364.html).
+我也写了一本关于Flink的中文书，购买请戳京东链接。👉 [jd.com](https://item.jd.com/13154364.html).
 
 ## Project Structure
 
