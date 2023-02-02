@@ -1,17 +1,14 @@
 # Flink Tutorials
 
+[English](https://github.com/luweizheng/flink-tutorials/blob/master/README.md) | [中文](https://github.com/luweizheng/flink-tutorials/blob/master/README_zh.md)
+
 ## Introduction
 
-https://github.com/luweizheng/flink-tutorials
-
-This is a Flink(v1.11) tutorial repo. I will update to latest Flink version in the future.
-
-You can clone it and learn some basic ideas about Flink. I use Java and Scala to demonstrate how to use Flink. You need to install Intellij Idea and Maven in your local environment.
+This is a tutorial repo based on Flink v1.12.4. You can clone it and learn some basic ideas about Flink. I use Java and Scala to demonstrate how to use Flink. You need to install Intellij Idea and Maven in your local environment.
 
 **Please star this repo** if you find it useful.
 
-I also wrote a book (in Chinese) about Flink. 👉 [jd.com](https://item.jd.com/13154364.html).
-我也写了一本关于Flink的中文书，购买请戳京东链接。👉 [jd.com](https://item.jd.com/13154364.html).
+I also wrote a book (in Chinese) about Flink.
 
 ## Project Structure
 
@@ -31,7 +28,5 @@ I also wrote a book (in Chinese) about Flink. 👉 [jd.com](https://item.jd.com/
 
 ## Contact
 
-* Wechat
-
-![公众号](http://aixingqiu-1258949597.cos.ap-beijing.myqcloud.com/2019-11-20-021810.png)
+Feel free to reach out via [email](mailto:luweizheng36@hotmail.com).
 
