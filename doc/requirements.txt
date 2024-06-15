@@ -1,0 +1,11 @@
+jupyter-book
+sphinx_togglebutton
+sphinx_copybutton
+myst_nb
+sphinx_comments
+sphinx_external_toc
+sphinx_design
+sphinx_book_theme
+sphinxcontrib-bibtex
+sphinx-jupyterbook-latex
+sphinxcontrib-jsmath

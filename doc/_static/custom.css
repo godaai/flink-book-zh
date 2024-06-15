@@ -1,0 +1,3 @@
+html[data-theme="light"] {
+    --sbt-color-announcement: rgb(125, 125, 125);
+}
