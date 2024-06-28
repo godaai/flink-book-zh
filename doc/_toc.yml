@@ -10,11 +10,19 @@ subtrees:
           - file: ch-system-design/exercise-wordcount
       - file: ch-datastream-api/index
         entries:
-          - file: ch-datastream-api/data-types
           - file: ch-datastream-api/skeleton
           - file: ch-datastream-api/transformations
+          - file: ch-datastream-api/data-types
           - file: ch-datastream-api/user-define-functions
           - file: ch-datastream-api/exercise-stock-basic
+      - file: ch-time-window/index
+        entries:
+          - file: ch-time-window/time
+          - file: ch-time-window/process-function
+          - file: ch-time-window/window
+          - file: ch-time-window/join
+          - file: ch-time-window/late-elements
+          - file: ch-time-window/exercise-stock
       - file: ch-state-checkpoint/index
         entries:
           - file: ch-state-checkpoint/checkpoint
@@ -24,18 +32,10 @@ subtrees:
       - file: ch-table-sql/index
         entries:
           - file: ch-table-sql/table-overview
-          - file: ch-table-sql/catalog-function
           - file: ch-table-sql/dynamic-table
+          - file: ch-table-sql/sql-window
           - file: ch-table-sql/sql-join
           - file: ch-table-sql/sql-ddl
           - file: ch-table-sql/system-function
-          - file: ch-table-sql/sql-window
+          - file: ch-table-sql/catalog-function
           - file: ch-table-sql/exercise-iot
-      - file: ch-time-window/index
-        entries:
-          - file: ch-time-window/join
-          - file: ch-time-window/late-elements
-          - file: ch-time-window/process-function
-          - file: ch-time-window/time
-          - file: ch-time-window/window
-          - file: ch-time-window/exercise-stock
