@@ -2,6 +2,21 @@ root: index
 subtrees:
   - numbered: 2
     entries:
+      - file: ch-big-data-intro/index
+        entries:
+          - file: ch-big-data-intro/bigdata
+          - file: ch-big-data-intro/batch-processing-and-stream-processing
+          - file: ch-big-data-intro/representative-big-data-technologies
+          - file: ch-big-data-intro/evolution-of-big-data-processing-platforms
+          - file: ch-big-data-intro/stream-processing-basics
+          - file: ch-big-data-intro/bigdata-programming-languages
+          - file: ch-big-data-intro/exercise-building-data-stream-using-Kafka
+      - file: ch-programming-basics/index
+        entries:
+          - file: ch-programming-basics/inheritance-and-polymorphism
+          - file: ch-programming-basics/generics
+          - file: ch-programming-basics/functional-programming
+          - file: ch-programming-basics/exercise-Flink-development-environment
       - file: ch-system-design/index
         entries:
           - file: ch-system-design/dataflow
