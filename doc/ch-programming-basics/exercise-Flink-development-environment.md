@@ -1,5 +1,5 @@
 (exercise-Flink-development-environment)=
-# 2.4 案例实战 Flink开发环境搭建
+# 案例实战 Flink开发环境搭建
 
 本案例实战主要带领读者完成对Flink开发环境的搭建。
 
@@ -35,6 +35,8 @@ $ ./bin/start-cluster.sh  # 启动 Flink 集群
 
 成功启动后，打开浏览器，输入`http://localhost:8081`，可以进入Flink集群的仪表盘（WebUI），如图2-4所示。Flink WebUI可以对Flink集群进行管理和监控。
 
+![图2-4  Flink WebUI](./img/flink-WebUI.png)
+
 ## 2.4.3 创建Flink工程
 
 我们使用Maven从零开始创建一个Flink工程。
@@ -57,15 +59,27 @@ archetype是Maven提供的一种项目模板，是别人提前准备好了的项
 
 如图2-5所示，在IntelliJ IDEA里依次单击“File”→“New”→“Project”，创建一个新工程。
 
+![图2-5  在IntelliJ IDEA中创建新工程](./img/new-project.png)
+
 如图2-6所示，选择左侧的“Maven”，并勾选“Create from archetype”，并单击右侧的“Add Archetype”按钮。
+
+![图2-6  添加Maven项目](./img/Maven.png)
 
 如图2-7所示，在弹出的窗口中填写archetype信息。其中GroupId为org.apache.flink，ArtifactId为flink-quickstart-java，Version为1.11.2，然后单击“OK”。这里主要是告诉Maven去资源库中下载哪个版本的模板。随着Flink的迭代开发，Version也在不断更新，读者可以在Flink的Maven资源库中查看最新的版本。GroupId、ArtifactId、Version可以唯一表示一个发布出来的Java程序包。配置好后，单击Next按钮进入下一步。
 
+![图2-7  填写archetype信息](./img/archetype.png)
+
 如图2-8所示，这一步是建立你自己的Maven工程，以区别其他Maven工程，GroupId是你的公司或部门名称（可以随意填写），ArtifactId是工程发布时的Java归档（Java Archive，JAR）包名，Version是工程的版本。这些配置主要用于区别不同公司所发布的不同包，这与Maven和版本控制相关，Maven的教程中都会介绍这些概念，这里不赘述。
+
+![图2-8  配置你的工程信息](./img/project-info.png)
 
 接下来可以继续单击“Next”按钮，注意最后一步选择你的工程所在的磁盘位置，单击“Finish”按钮，如图2-9所示。至此，一个Flink模板就下载好了。
 
+![图2-9  配置本工程的位置](./img/project-location.png)
+
 工程结构如图2-10所示。左侧的“Project”栏是工程结构，其中src/main/java文件夹是Java代码文件存放位置，src/main/scala是Scala代码文件存放位置。我们可以在StreamingJob这个文件上继续修改，也可以重新创建一个新文件。
+
+![图2-10  工程结构](./img/project-structure.png)
 
 注意，开发前要单击右下角的“Import Changes”，让Maven导入所依赖的包。
 
@@ -215,6 +229,10 @@ StreamExecutionEnvironment.getExecutionEnvironment();
    - 在IntelliJ IDEA中，单击绿色运行按钮，运行这个程序。图2-11所示的两个绿色运行按钮中的任意一个都可以运行这个程序。
    - IntelliJ IDEA下方的“Run”栏会显示程序的输出，包括本次需要输出的结果，如图2-12所示。
 
+![图2-11  在IntelliJ IDEA中运行Flink程序](./img/run.png)
+
+![图2-12  WordCount程序运行结果](./img/result.png)
+
 恭喜你，你的第一个Flink程序运行成功！
 
 **提示**
@@ -242,6 +260,8 @@ com.flink.tutorials.java.api.projects.wordcount.WordCountKafkaInStdOut
 
 如图2-13所示，这时，Flink WebUI上就多了一个Flink作业。
 
+![图2-13  Flink WebUI中多了一个Flink作业](./img/flink-WebUI-job.png)
+
 程序的输出会保存到Flink主目录下面的log目录下的.out文件中，可以使用下面的命令查看结果。
 
 ```bash
@@ -260,3 +280,6 @@ Flink开发和调试过程中，一般有如下几种方式运行程序。
 - 使用Flink提供的其他命令行工具，比如针对Scala、Python和SQL的交互式环境。
 
 对于新手，可以先使用IntelliJ IDEA提供的内置运行按钮，熟练后再使用命令行工具。
+
+## 本章小结
+本章中，我们回顾了Flink开发经常用到的继承和多态、泛型和函数式编程等概念，在本地搭建了一个Flink集群，创建了第一个Flink工程，并学会了如何运行Flink程序。

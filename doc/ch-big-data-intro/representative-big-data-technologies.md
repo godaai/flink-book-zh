@@ -20,7 +20,7 @@ Hadoop生态圈的核心组件主要有如下3个。
 - **Kafka**：Kafka是一款流处理框架，主要用作消息队列。
 - **ZooKeeper**：Hadoop生态圈中很多组件使用动物来命名，形成了一个大型“动物园”，ZooKeeper是这个动物园的管理者，主要负责分布式环境的协调。
 
-![图1-7  Hadoop生态圈](./img/)
+![图1-7  Hadoop生态圈](./img/hadoop.png)
 
 ## 1.3.2  Spark
 
@@ -35,11 +35,11 @@ Spark的核心在于计算，主要目的在于优化Hadoop MapReduce计算部�
 
 Spark并不能完全取代Hadoop，实际上，从图1-7可以看出，Spark融入了Hadoop生态圈，成为其中的重要一员。一个Spark任务很可能依赖HDFS上的数据，向YARN申请计算资源，将结果输出到HBase上。当然，Spark也可以不用依赖这些组件，独立地完成计算。
 
-![图1-8  Spark生态圈](./img/)
+![图1-8  Spark生态圈](./img/spark.png)
 
 Spark主要面向批处理需求，因其优异的性能和易用的接口，Spark已经是批处理界绝对的“王者”。Spark的子模块Spark Streaming提供了流处理的功能，它的流处理主要基于mini-batch的思想。如图1-9所示，Spark Streaming将输入数据流切分成多个批次，每个批次使用批处理的方式进行计算。因此，Spark是一款集批处理和流处理于一体的处理框架。
 
-![图1-9  Spark Streaming mini-batch处理](./img/)
+![图1-9  Spark Streaming mini-batch处理](./img/spark-streaming-mini-batch.png)
 
 ## 1.3.3  Apache Kafka
 
@@ -49,7 +49,7 @@ Kafka也是一种面向大数据领域的消息队列框架。在大数据生态
 
 如图1-10所示，企业中不同的应用系统作为数据生产者会产生大量数据流，这些数据流还需要进入不同的数据消费者，Kafka起到数据集成和系统解耦的作用。系统解耦是让某个应用系统专注于一个目标，以降低整个系统的维护难度。在实践上，一个企业经常拆分出很多不同的应用系统，系统之间需要建立数据流管道（Stream Pipeline）。假如没有Kafka的消息队列，M个生产者和N个消费者之间要建立M×N个点对点的数据流管道，Kafka就像一个中介，让数据管道的个数变为M+N，大大减小了数据流管道的复杂程度。
 
-![图1-10  Kafka可以连接多个应用系统](./img/)
+![图1-10  Kafka可以连接多个应用系统](./img/kafka.png)
 
 从批处理和流处理的角度来讲，数据流经Kafka后会持续不断地写入HDFS，积累一段时间后可提供给后续的批处理任务，同时数据流也可以直接流入Flink，被用于流处理。
 
