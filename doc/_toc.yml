@@ -16,7 +16,7 @@ subtrees:
           - file: ch-programming-basics/inheritance-and-polymorphism
           - file: ch-programming-basics/generics
           - file: ch-programming-basics/functional-programming
-          - file: ch-programming-basics/exercise-Flink-development-environment
+          - file: ch-programming-basics/exercise-dev-environment
       - file: ch-system-design/index
         entries:
           - file: ch-system-design/dataflow

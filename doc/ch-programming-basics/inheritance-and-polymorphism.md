@@ -9,9 +9,12 @@
 
 {numref}`extend` 所示为对动物进行的简单的建模。其中，每个动物都有一些基本属性，即名字（name）和描述（description）；有一些基本方法，即 getName()和 eat()，这些基本功能共同组成了 Animal 类。在 Animal 类的基础上，可以衍生出各种各样的子类、子类的子类等。比如，Dog 类有自己的 dogData 属性和 bark()方法，同时也可以使用父类的 name 等属性和 eat() 方法。
 
-我们将 {numref}`extend` 所示的 Animal 类继承关系转化为代码，一个 Animal 公共父类可以抽象如代码清单 2-1 所示。
+我们将 {numref}`extend` 所示的 Animal 类继承关系转化为代码，一个 Animal 公共父类可以抽象如 {numref}`code-animal-class` 所示。
 
-```java
+```{code-block} java
+:caption: Animal 类
+:name: code-animal-class
+
 public class Animal { 
 
     private String name;
@@ -32,8 +35,6 @@ public class Animal {
 }
 ```
 
-代码清单 2-1 一个简单的 Animal 类
-
 ```{figure} ./img/extend.png
 ---
 name: extend
@@ -42,9 +43,12 @@ width: 60%
 Animal 类继承关系
 ```
 
-子类可以拥有父类非 private 的属性和方法，同时可以扩展属于自己的属性和方法。比如 Dog 类或 Fish 类可以继承 Animal 类，可以直接复用 Animal 类里定义的属性和方法。这样就不存在代码的重复问题，整个工程的可维护性更好。在 Java 和 Scala 中，子类继承父类时都要使用 extends 关键字。代码清单 2-2 实现了一个 Dog 类，并在里面添加了 Dog 类的一些特有成员。
+子类可以拥有父类非 private 的属性和方法，同时可以扩展属于自己的属性和方法。比如 Dog 类或 Fish 类可以继承 Animal 类，可以直接复用 Animal 类里定义的属性和方法。这样就不存在代码的重复问题，整个工程的可维护性更好。在 Java 和 Scala 中，子类继承父类时都要使用 extends 关键字。{numref}`code-dog-class` 实现了一个 Dog 类，并在里面添加了 Dog 类的一些特有成员。
 
-```java
+```{code-block} java
+:caption: Dog 类
+:name: code-dog-class
+
 public class Dog extends Animal implements Move { 
 
     private String dogData;  
