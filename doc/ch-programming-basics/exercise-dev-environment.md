@@ -1,4 +1,4 @@
-(exercise-Flink-development-environment)=
+(exercise-dev-environment)=
 # 案例实战 Flink 开发环境搭建
 
 本案例实战主要带领读者完成对 Flink 开发环境的搭建。
