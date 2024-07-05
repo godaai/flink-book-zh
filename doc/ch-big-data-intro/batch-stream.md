@@ -3,12 +3,12 @@
 
 ## 数据与数据流
 
-在大数据的 5 个 “V” 中我们已经提到，数据量大且产生速度快。从时间维度来讲，数据源源不断地产生，形成一个无界的数据流（Unbounded Data Stream）。如 {numref}`data-and-data-stream` 所示，单条数据被称为事件（Event），事件按照时序排列会形成一个数据流。例如，我们每时每刻的运动数据都会累积到手机传感器上，金融交易随时随地都在发生，物联网（Internet of Things，IoT）传感器会持续监控并生成数据。
+在大数据的 5 个 “V” 中我们已经提到，数据量大且产生速度快。从时间维度来讲，数据源源不断地产生，形成一个无界的数据流（Unbounded Data Stream）。如 {numref}`fig-data-and-data-stream` 所示，单条数据被称为事件（Event），事件按照时序排列会形成一个数据流。例如，我们每时每刻的运动数据都会累积到手机传感器上，金融交易随时随地都在发生，物联网（Internet of Things，IoT）传感器会持续监控并生成数据。
 
 ```{figure} ./img/data-and-data-stream.png
 ---
 width: 60%
-name: data-and-data-stream
+name: fig-data-and-data-stream
 ---
 数据和数据流
 ```
@@ -39,12 +39,12 @@ name: data-and-data-stream
 
 ### 生产者 - 消费者模型
 
-处理流数据一般使用 “生产者 - 消费者”（Producer-Consumer）模型来解决问题。如 {numref}`producer-consumer` 所示，生产者生成数据，将数据发送到一个缓存区域（Buffer），消费者从缓存区域中消费数据。这里我们暂且不关心生产者如何生产数据，以及数据如何缓存，我们只关心如何实现消费者。
+处理流数据一般使用 “生产者 - 消费者”（Producer-Consumer）模型来解决问题。如 {numref}`fig-producer-consumer` 所示，生产者生成数据，将数据发送到一个缓存区域（Buffer），消费者从缓存区域中消费数据。这里我们暂且不关心生产者如何生产数据，以及数据如何缓存，我们只关心如何实现消费者。
 
 ```{figure} ./img/producer-consumer.png
 ---
 width: 60%
-name: producer-consumer
+name: fig-producer-consumer
 ---
 生产者 - 消费者模型
 ```

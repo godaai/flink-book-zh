@@ -4,7 +4,7 @@ subtrees:
     entries:
       - file: ch-big-data-intro/index
         entries:
-          - file: ch-big-data-intro/bigdata
+          - file: ch-big-data-intro/sec-bigdata
           - file: ch-big-data-intro/batch-stream
           - file: ch-big-data-intro/technologies
           - file: ch-big-data-intro/evolution
@@ -40,9 +40,9 @@ subtrees:
           - file: ch-time-window/exercise-stock
       - file: ch-state-checkpoint/index
         entries:
+          - file: ch-state-checkpoint/state
           - file: ch-state-checkpoint/checkpoint
           - file: ch-state-checkpoint/savepoint
-          - file: ch-state-checkpoint/state
           - file: ch-state-checkpoint/exercise-state
       - file: ch-flink-connectors/index
         entries:

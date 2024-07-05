@@ -73,11 +73,11 @@ x -> 2 * x
 
 代码清单 2-5 Java Lambda 表达式
 
-可以看到，这几个例子都有一个 `->`，表示这是一个函数式的映射，相对比较灵活的是左侧的输入参数和右侧的函数体。{numref}`lambda` 所示为 Java Lambda 表达式的拆解，这很符合数学中对一个函数做映射的思维方式。
+可以看到，这几个例子都有一个 `->`，表示这是一个函数式的映射，相对比较灵活的是左侧的输入参数和右侧的函数体。{numref}`fig-lambda` 所示为 Java Lambda 表达式的拆解，这很符合数学中对一个函数做映射的思维方式。
 
 ```{figure} ./img/lambda.png
 ---
-name: lambda
+name: fig-lambda
 width: 60%
 ---
 Java Lambda 表达式拆解
@@ -185,11 +185,11 @@ lengths.forEach((s) -> System.out.println(s));
 
 代码清单 2-7 使用 Lambda 表达式来完成对 String 类型列表的操作
 
-这段代码中，数据先经过 `stream()` 方法被转换为一个 `Stream` 类型，后经过 `filter()`、`map()`、`collect()` 等处理逻辑，生成我们所需的输出。各个操作之间使用英文点号 `.` 来连接，这种方式被称作方法链（Method Chaining）或者链式调用。链式调用可以被抽象成一个管道（Pipeline），将代码清单 2-7 进行抽象，可以形成 {numref}`stream` 所示的 Stream 管道。
+这段代码中，数据先经过 `stream()` 方法被转换为一个 `Stream` 类型，后经过 `filter()`、`map()`、`collect()` 等处理逻辑，生成我们所需的输出。各个操作之间使用英文点号 `.` 来连接，这种方式被称作方法链（Method Chaining）或者链式调用。链式调用可以被抽象成一个管道（Pipeline），将代码清单 2-7 进行抽象，可以形成 {numref}`fig-stream` 所示的 Stream 管道。
 
 ```{figure} ./img/stream.png
 ---
-name: stream
+name: fig-stream
 width: 60%
 ---
 Stream 管道

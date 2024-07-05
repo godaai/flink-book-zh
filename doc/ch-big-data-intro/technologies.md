@@ -5,7 +5,7 @@ MapReduce 编程模型的提出为大数据分析和处理开创了一条先河�
 
 ## Hadoop
 
-2004 年，Hadoop 的创始人道格·卡廷（Doug Cutting）和麦克·卡法雷拉（Mike Cafarella）受 MapReduce 编程模型和 Google File System 等技术的启发，对其中提及的思想进行了编程实现，Hadoop 的名字来源于道格 · 卡廷儿子的玩具大象。由于道格 · 卡廷后来加入了雅虎，并在雅虎工作期间做了大量 Hadoop 的研发工作，因此 Hadoop 也经常被认为是雅虎开源的一款大数据框架。时至今日，Hadoop 不仅是整个大数据领域的先行者和领航者，更形成了一套围绕 Hadoop 的生态圈，Hadoop 和它的生态圈是绝大多数企业首选的大数据解决方案。{numref}`hadoop-ecosystem` 展示了 Hadoop 生态圈一些流行组件。
+2004 年，Hadoop 的创始人道格·卡廷（Doug Cutting）和麦克·卡法雷拉（Mike Cafarella）受 MapReduce 编程模型和 Google File System 等技术的启发，对其中提及的思想进行了编程实现，Hadoop 的名字来源于道格 · 卡廷儿子的玩具大象。由于道格 · 卡廷后来加入了雅虎，并在雅虎工作期间做了大量 Hadoop 的研发工作，因此 Hadoop 也经常被认为是雅虎开源的一款大数据框架。时至今日，Hadoop 不仅是整个大数据领域的先行者和领航者，更形成了一套围绕 Hadoop 的生态圈，Hadoop 和它的生态圈是绝大多数企业首选的大数据解决方案。{numref}`fig-hadoop-ecosystem` 展示了 Hadoop 生态圈一些流行组件。
 
 Hadoop 生态圈的核心组件主要有如下 3 个。
 
@@ -23,7 +23,7 @@ Hadoop 生态圈的核心组件主要有如下 3 个。
 ```{figure} ./img/hadoop.png
 ---
 width: 60%
-name: hadoop-ecosystem
+name: fig-hadoop-ecosystem
 ---
 Hadoop 生态圈
 ```
@@ -39,22 +39,22 @@ Spark 是一款大数据处理框架，其开发初衷是改良 Hadoop MapReduce
 
 Spark 的核心在于计算，主要目的在于优化 Hadoop MapReduce 计算部分，在计算层面提供更细致的服务。
 
-Spark 并不能完全取代 Hadoop，实际上，从 {numref}`hadoop-ecosystem` 可以看出，Spark 融入了 Hadoop 生态圈，成为其中的重要一员。一个 Spark 任务很可能依赖 HDFS 上的数据，向 YARN 申请计算资源，将结果输出到 HBase 上。当然，Spark 也可以不用依赖这些组件，独立地完成计算。
+Spark 并不能完全取代 Hadoop，实际上，从 {numref}`fig-hadoop-ecosystem` 可以看出，Spark 融入了 Hadoop 生态圈，成为其中的重要一员。一个 Spark 任务很可能依赖 HDFS 上的数据，向 YARN 申请计算资源，将结果输出到 HBase 上。当然，Spark 也可以不用依赖这些组件，独立地完成计算。
 
 ```{figure} ./img/spark.png
 ---
 width: 60%
-name: spark-ecosystem
+name: fig-spark-ecosystem
 ---
 Spark 生态圈
 ```
 
-Spark 主要面向批处理需求，因其优异的性能和易用的接口，Spark 已经是批处理界绝对的 “王者”。Spark 的子模块 Spark Streaming 提供了流处理的功能，它的流处理主要基于 mini-batch 的思想。如 {numref}`spark-streaming-mini-batch` 所示，Spark Streaming 将输入数据流切分成多个批次，每个批次使用批处理的方式进行计算。因此，Spark 是一款集批处理和流处理于一体的处理框架。
+Spark 主要面向批处理需求，因其优异的性能和易用的接口，Spark 已经是批处理界绝对的 “王者”。Spark 的子模块 Spark Streaming 提供了流处理的功能，它的流处理主要基于 mini-batch 的思想。如 {numref}`fig-spark-streaming-mini-batch` 所示，Spark Streaming 将输入数据流切分成多个批次，每个批次使用批处理的方式进行计算。因此，Spark 是一款集批处理和流处理于一体的处理框架。
 
 ```{figure} ./img/spark-streaming-mini-batch.png
 ---
 width: 60%
-name: spark-streaming-mini-batch
+name: fig-spark-streaming-mini-batch
 ---
 Spark Streaming mini-batch 处理
 ```
@@ -65,12 +65,12 @@ Spark Streaming mini-batch 处理
 
 Kafka 也是一种面向大数据领域的消息队列框架。在大数据生态圈中，Hadoop 的 HDFS 或 Amazon S3 提供数据存储服务，Hadoop MapReduce、Spark 和 Flink 负责计算，Kafka 常常用来连接不同的应用系统。
 
-如 {numref}`kafka-multi-system` 所示，企业中不同的应用系统作为数据生产者会产生大量数据流，这些数据流还需要进入不同的数据消费者，Kafka 起到数据集成和系统解耦的作用。系统解耦是让某个应用系统专注于一个目标，以降低整个系统的维护难度。在实践上，一个企业经常拆分出很多不同的应用系统，系统之间需要建立数据流管道（Stream Pipeline）。假如没有 Kafka 的消息队列，M 个生产者和 N 个消费者之间要建立 M×N 个点对点的数据流管道，Kafka 就像一个中介，让数据管道的个数变为 M+N，大大减小了数据流管道的复杂程度。
+如 {numref}`fig-kafka-multi-system` 所示，企业中不同的应用系统作为数据生产者会产生大量数据流，这些数据流还需要进入不同的数据消费者，Kafka 起到数据集成和系统解耦的作用。系统解耦是让某个应用系统专注于一个目标，以降低整个系统的维护难度。在实践上，一个企业经常拆分出很多不同的应用系统，系统之间需要建立数据流管道（Stream Pipeline）。假如没有 Kafka 的消息队列，M 个生产者和 N 个消费者之间要建立 M×N 个点对点的数据流管道，Kafka 就像一个中介，让数据管道的个数变为 M+N，大大减小了数据流管道的复杂程度。
 
 ```{figure} ./img/kafka.png
 ---
 width: 60%
-name: kafka-multi-system
+name: fig-kafka-multi-system
 ---
 Kafka 可以连接多个应用系统
 ```
@@ -83,14 +83,14 @@ Kafka 可以连接多个应用系统
 
 Flink 是由德国 3 所大学发起的的学术项目，后来不断发展壮大，并于 2014 年年末成为 Apache 顶级项目之一。在德语中，“flink” 表示快速、敏捷，以此来表征这款计算框架的特点。
 
-Flink 主要面向流处理，如果说 Spark 是批处理界的 “王者”，那么 Flink 就是流处理领域冉冉升起的 “新星”。流处理并不是一项全新的技术，在 Flink 之前，不乏流处理引擎，比较著名的有 Storm、Spark Streaming，{numref}`evolution-stream-frameworks` 展示了流处理框架经历的三代演进。
+Flink 主要面向流处理，如果说 Spark 是批处理界的 “王者”，那么 Flink 就是流处理领域冉冉升起的 “新星”。流处理并不是一项全新的技术，在 Flink 之前，不乏流处理引擎，比较著名的有 Storm、Spark Streaming，{numref}`fig-evolution-stream-frameworks` 展示了流处理框架经历的三代演进。
 
 2011 年成熟的 Apache Strom（以下简称 Storm）是第一代被广泛采用的流处理引擎。它是以数据流中的事件为最小单位来进行计算的。以事件为单位的框架的优势是延迟非常低，可以提供毫秒级的延迟。流处理结果依赖事件到达的时序准确性，Storm 并不能保障处理结果的一致性和准确性。Storm 只支持至少一次（At-Least-Once）和至多一次（At-Most-Once），即数据流里的事件投递只能保证至少一次或至多一次，不能保证只有一次（Exactly-Once）。在多项基准测试中，Storm 的数据吞吐量和延迟都远逊于 Flink。对于很多对数据准确性要求较高的应用，Storm 有一定劣势。此外，Storm 不支持 SQL，不支持中间状态（State）。
 
 ```{figure} ./img/evolution-stream-frameworks.png
 ---
 width: 60%
-name: evolution-stream-frameworks
+name: fig-evolution-stream-frameworks
 ---
 流处理框架演进
 ```
