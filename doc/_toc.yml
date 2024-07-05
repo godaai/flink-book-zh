@@ -4,7 +4,7 @@ subtrees:
     entries:
       - file: ch-big-data-intro/index
         entries:
-          - file: ch-big-data-intro/bigdata
+          - file: ch-big-data-intro/sec-bigdata
           - file: ch-big-data-intro/batch-stream
           - file: ch-big-data-intro/technologies
           - file: ch-big-data-intro/evolution

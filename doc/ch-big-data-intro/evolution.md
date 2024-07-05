@@ -5,12 +5,12 @@
 
 ## Lambda 架构
 
-当以 Storm 为代表的第一代流处理框架成熟后，一些互联网公司为了兼顾数据的实时性和准确性，采用 {numref}`lambda-architecture` 所示的 Lambda 架构来处理数据并提供在线服务。Lambda 架构主要分为 3 部分：批处理层、流处理层和在线服务层。其中数据流来自 Kafka 这样的消息队列。
+当以 Storm 为代表的第一代流处理框架成熟后，一些互联网公司为了兼顾数据的实时性和准确性，采用 {numref}`fig-lambda-architecture` 所示的 Lambda 架构来处理数据并提供在线服务。Lambda 架构主要分为 3 部分：批处理层、流处理层和在线服务层。其中数据流来自 Kafka 这样的消息队列。
 
 ```{figure} ./img/lambda.png
 ---
 width: 60%
-name: lambda-architecture
+name: fig-lambda-architecture
 ---
 Lambda 架构
 ```
@@ -43,12 +43,12 @@ Lambda 架构
 
 ## Kappa 架构
 
-Kafka 的创始人杰•克雷普斯认为在很多场景下，维护一套 Lambda 架构的大数据处理平台耗时耗力，于是提出在某些场景下，没有必要维护一个批处理层，直接使用一个流处理层即可满足需求，即 {numref}`kappa-architecture` 所示的 Kappa 架构。
+Kafka 的创始人杰•克雷普斯认为在很多场景下，维护一套 Lambda 架构的大数据处理平台耗时耗力，于是提出在某些场景下，没有必要维护一个批处理层，直接使用一个流处理层即可满足需求，即 {numref}`fig-kappa-architecture` 所示的 Kappa 架构。
 
 ```{figure} ./img/kappa.png
 ---
 width: 60%
-name: kappa-architecture
+name: fig-kappa-architecture
 ---
 Kappa 架构
 ```

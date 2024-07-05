@@ -33,11 +33,11 @@ $ cd flink-1.11.2-bin-scala_2.11  # 进入解压目录
 $ ./bin/start-cluster.sh  # 启动 Flink 集群
 ```
 
-成功启动后，打开浏览器，输入 `http://localhost:8081`，可以进入 Flink 集群的仪表盘（WebUI），如 {numref}`flink-WebUI-job` 所示。Flink WebUI 可以对 Flink 集群进行管理和监控。
+成功启动后，打开浏览器，输入 `http://localhost:8081`，可以进入 Flink 集群的仪表盘（WebUI），如 {numref}`fig-flink-WebUI` 所示。Flink WebUI 可以对 Flink 集群进行管理和监控。
 
 ```{figure} ./img/flink-WebUI.png
 ---
-name: flink-WebUI
+name: fig-flink-WebUI
 width: 60%
 ---
 Flink WebUI
@@ -63,61 +63,61 @@ archetype 是 Maven 提供的一种项目模板，是别人提前准备好了的
 
 不熟悉 Maven 的读者可以先使用 IntelliJ IDEA 内置的 Maven 工具，熟悉 Maven 的读者可直接跳过这部分。
 
-如 {numref}`new-project` 所示，在 IntelliJ IDEA 里依次单击“File”→“New”→“Project”，创建一个新工程。
+如 {numref}`fig-new-project` 所示，在 IntelliJ IDEA 里依次单击“File”→“New”→“Project”，创建一个新工程。
 
 ```{figure} ./img/new-project.png
 ---
-name: new-project
+name: fig-new-project
 width: 60%
 ---
 在 IntelliJ IDEA 中创建新工程
 ```
 
-如 {numref}`Maven` 所示，选择左侧的“Maven”，并勾选“Create from archetype”，并单击右侧的“Add Archetype”按钮。
+如 {numref}`fig-Maven` 所示，选择左侧的“Maven”，并勾选“Create from archetype”，并单击右侧的“Add Archetype”按钮。
 
 ```{figure} ./img/Maven.png
 ---
-name: Maven
+name: fig-Maven
 width: 60%
 ---
 添加 Maven 项目
 ```
 
-如 {numref}`archetype` 所示，在弹出的窗口中填写 archetype 信息。其中 GroupId 为 org.apache.flink，ArtifactId 为 flink-quickstart-java，Version 为 1.11.2，然后单击“OK”。这里主要是告诉 Maven 去资源库中下载哪个版本的模板。随着 Flink 的迭代开发，Version 也在不断更新，读者可以在 Flink 的 Maven 资源库中查看最新的版本。GroupId、ArtifactId、Version 可以唯一表示一个发布出来的 Java 程序包。配置好后，单击 Next 按钮进入下一步。
+如 {numref}`fig-archetype` 所示，在弹出的窗口中填写 archetype 信息。其中 GroupId 为 org.apache.flink，ArtifactId 为 flink-quickstart-java，Version 为 1.11.2，然后单击“OK”。这里主要是告诉 Maven 去资源库中下载哪个版本的模板。随着 Flink 的迭代开发，Version 也在不断更新，读者可以在 Flink 的 Maven 资源库中查看最新的版本。GroupId、ArtifactId、Version 可以唯一表示一个发布出来的 Java 程序包。配置好后，单击 Next 按钮进入下一步。
 
 ```{figure} ./img/archetype.png
 ---
-name: archetype
+name: fig-archetype
 width: 60%
 ---
 填写 archetype 信息
 ```
 
-如 {numref}`project-info` 所示，这一步是建立你自己的 Maven 工程，以区别其他 Maven 工程，GroupId 是你的公司或部门名称（可以随意填写），ArtifactId 是工程发布时的 Java 归档（Java Archive，JAR）包名，Version 是工程的版本。这些配置主要用于区别不同公司所发布的不同包，这与 Maven 和版本控制相关，Maven 的教程中都会介绍这些概念，这里不赘述。
+如 {numref}`fig-project-info` 所示，这一步是建立你自己的 Maven 工程，以区别其他 Maven 工程，GroupId 是你的公司或部门名称（可以随意填写），ArtifactId 是工程发布时的 Java 归档（Java Archive，JAR）包名，Version 是工程的版本。这些配置主要用于区别不同公司所发布的不同包，这与 Maven 和版本控制相关，Maven 的教程中都会介绍这些概念，这里不赘述。
 
 ```{figure} ./img/project-info.png
 ---
-name: project-info
+name: fig-project-info
 width: 60%
 ---
 配置你的工程信息
 ```
 
-接下来可以继续单击“Next”按钮，注意最后一步选择你的工程所在的磁盘位置，单击“Finish”按钮，如 {numref}`project-location` 所示。至此，一个 Flink 模板就下载好了。
+接下来可以继续单击“Next”按钮，注意最后一步选择你的工程所在的磁盘位置，单击“Finish”按钮，如 {numref}`fig-project-location` 所示。至此，一个 Flink 模板就下载好了。
 
 ```{figure} ./img/project-location.png
 ---
-name: project-location
+name: fig-project-location
 width: 60%
 ---
 配置本工程的位置
 ```
 
-工程结构如 {numref}`project-structure` 所示。左侧的“Project”栏是工程结构，其中 src/main/java 文件夹是 Java 代码文件存放位置，src/main/scala 是 Scala 代码文件存放位置。我们可以在 StreamingJob 这个文件上继续修改，也可以重新创建一个新文件。
+工程结构如 {numref}`fig-project-structure` 所示。左侧的“Project”栏是工程结构，其中 src/main/java 文件夹是 Java 代码文件存放位置，src/main/scala 是 Scala 代码文件存放位置。我们可以在 StreamingJob 这个文件上继续修改，也可以重新创建一个新文件。
 
 ```{figure} ./img/project-structure.png
 ---
-name: project-structure
+name: fig-project-structure
 width: 60%
 ---
 工程结构
@@ -272,12 +272,12 @@ StreamExecutionEnvironment.getExecutionEnvironment();
 我们在 1.7 节中展示过如何启动一个 Kafka 集群，并向某个 Topic 内发送数据流。在本次 Flink 作业启动之前，我们还要按照 1.7 节提到的方式启动一个 Kafka 集群、创建对应的 Topic，并向 Topic 中写入数据。
 
 1. 在 IntelliJ IDEA 中运行程序
-   - 在 IntelliJ IDEA 中，单击绿色运行按钮，运行这个程序。{numref}`run` 所示的两个绿色运行按钮中的任意一个都可以运行这个程序。
-   - IntelliJ IDEA 下方的“Run”栏会显示程序的输出，包括本次需要输出的结果，{numref}`result` 所示。
+   - 在 IntelliJ IDEA 中，单击绿色运行按钮，运行这个程序。{numref}`fig-run` 所示的两个绿色运行按钮中的任意一个都可以运行这个程序。
+   - IntelliJ IDEA 下方的“Run”栏会显示程序的输出，包括本次需要输出的结果，{numref}`fig-result` 所示。
 
 ```{figure} ./img/run.png
 ---
-name: run
+name: fig-run
 width: 60%
 ---
 在 IntelliJ IDEA 中运行 Flink 程序
@@ -285,7 +285,7 @@ width: 60%
 
 ```{figure} ./img/result.png
 ---
-name: result
+name: fig-result
 width: 60%
 ---
 WordCount 程序运行结果
@@ -319,11 +319,11 @@ com.flink.tutorials.java.api.projects.wordcount.WordCountKafkaInStdOut
 /Users/luweizheng/Projects/big-data/flink-tutorials/target/flink-tutorials-0.1.jar
 ```
 
-如{numref}`flink-WebUI-job`示，这时，Flink WebUI 上就多了一个 Flink 作业。
+如{numref}`fig-flink-WebUI-job`示，这时，Flink WebUI 上就多了一个 Flink 作业。
 
 ```{figure} ./img/flink-WebUI-job.png
 ---
-name: flink-WebUI-job
+name: fig-flink-WebUI-job
 width: 60%
 ---
 Flink WebUI 中多了一个 Flink 作业
