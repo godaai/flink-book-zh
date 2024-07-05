@@ -25,7 +25,7 @@
 ```{figure} ./img/state-acquisition-and-update.png
 ---
 name: fig-state-acquisition-and-update
-width: 80%
+width: 50%
 align: center
 ---
 状态获取和更新示意图
@@ -125,7 +125,7 @@ Flink 算子扩容示意图
 ```{figure} ./img/inheritance-relationships-of-keyedState.png
 ---
 name: fig-keyed-state-inheritance
-width: 80%
+width: 60%
 align: center
 ---
 Keyed State 继承关系
