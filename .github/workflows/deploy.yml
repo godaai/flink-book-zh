@@ -1,10 +1,9 @@
 name: Deploy
 
 on:
-  pull_request:
-    branches:
-      - 'master'
-    types: [closed]
+  push:
+    tags:
+      - '*'
 
 jobs:
   build:
