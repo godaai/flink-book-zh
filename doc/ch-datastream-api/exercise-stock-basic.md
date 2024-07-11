@@ -1,5 +1,5 @@
 (exercise-stock-basic)= 
-# 习题 股票数据流处理
+# 案例实战：股票数据流处理
 
 :::{note}
 

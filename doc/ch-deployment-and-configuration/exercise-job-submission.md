@@ -1,5 +1,5 @@
-(experiment-job-coding-packaging-and-submission)=
-# 实验 作业编码、打包与提交
+(sec-exercise-job-submission)=
+# 案例实战：作业编码、打包与提交
 
 本章的重点是集群部署与作业提交，本实验也与此相关。
 

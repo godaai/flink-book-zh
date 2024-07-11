@@ -1,5 +1,5 @@
 (exercise-iot)=
-# 练习：SQL on IoT
+# 案例实战：SQL on IoT
 
 :::{note}
 

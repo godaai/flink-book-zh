@@ -1,5 +1,5 @@
 (exercise-wordcount)=
-# 练习：WordCount
+# 案例实战：WordCount
 
 :::{note}
 

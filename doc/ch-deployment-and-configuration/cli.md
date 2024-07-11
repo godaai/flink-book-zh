@@ -1,4 +1,4 @@
-(flink-command-line-interface-guide)=
+(sec-cli)=
 # 命令行工具
 
 在生产环境中，Flink 使用命令行工具（Command Line Interface）来管理作业的执行。命令行工具本质上是一个可执行脚本，名为 flink，放置在 Flink 的主目录下的 bin 文件夹中。它的功能主要包括：提交、取消作业，罗列当前正在执行和排队的作业、获取某个作业的信息，设置 Savepoint 等。
