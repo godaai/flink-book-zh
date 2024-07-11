@@ -1,4 +1,4 @@
-(operator-chaining-and-slot-sharing)=
+(sec-operator-chaining-slot-sharing)=
 # 算子链与槽位共享
 
 在第 3 章中我们曾介绍了算子链和槽位共享的概念。默认情况下，这两个功能都是开启的。

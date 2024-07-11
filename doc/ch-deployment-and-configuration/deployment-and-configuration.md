@@ -1,4 +1,4 @@
-(flink-deployment-and-configuration)=
+(sec-deployment-and-configuration)=
 # Flink 集群部署模式
 
 当前，信息系统基础设施正在飞速发展，常见的基础设施包括物理机集群、虚拟机集群、容器集群等。为了兼容这些基础设施，Flink 曾在 1.7 版本中做了重构，提出了第 3 章中所示的 Master-Worker 架构，该架构可以兼容几乎所有主流信息系统的基础设施，包括 Standalone 集群、Hadoop YARN 集群或 Kubernetes 集群。

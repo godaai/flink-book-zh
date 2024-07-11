@@ -1,5 +1,5 @@
-(exercise-stock-price-data-stream)=
-# 实验 读取并输出股票价格数据流
+(sec-exercise-stock-price-with-source-sink)=
+# 案例实战：读取并输出股票价格数据流
 
 经过本章的学习，读者应该基本了解了 Flink Connector 的使用方法，本节我们继续以股票交易场景来模拟数据流的输入和输出。
 

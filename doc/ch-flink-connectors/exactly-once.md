@@ -1,4 +1,4 @@
-(Exactly-Once-guarantee)=
+(sec-exactly-once)=
 # Flink 端到端的 Exactly-Once 保障
 
 ## 故障恢复与一致性保障

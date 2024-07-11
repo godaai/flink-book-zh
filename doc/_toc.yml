@@ -4,7 +4,7 @@ subtrees:
     entries:
       - file: ch-big-data-intro/index
         entries:
-          - file: ch-big-data-intro/sec-bigdata
+          - file: ch-big-data-intro/bigdata
           - file: ch-big-data-intro/batch-stream
           - file: ch-big-data-intro/technologies
           - file: ch-big-data-intro/evolution
@@ -46,10 +46,10 @@ subtrees:
           - file: ch-state-checkpoint/exercise-state
       - file: ch-flink-connectors/index
         entries:
-          - file: ch-flink-connectors/Exactly-Once-guarantee
+          - file: ch-flink-connectors/exactly-once
           - file: ch-flink-connectors/custom-source-and-sink
           - file: ch-flink-connectors/flink-connector
-          - file: ch-flink-connectors/exercise-stock-price-data-stream
+          - file: ch-flink-connectors/exercise-stock-price-with-source-sink
       - file: ch-table-sql/index
         entries:
           - file: ch-table-sql/table-overview
@@ -62,9 +62,9 @@ subtrees:
           - file: ch-table-sql/exercise-iot
       - file: ch-deployment-and-configuration/index
         entries:
-          - file: ch-deployment-and-configuration/flink-deployment-and-configuration
+          - file: ch-deployment-and-configuration/deployment-and-configuration
           - file: ch-deployment-and-configuration/configuration-file
-          - file: ch-deployment-and-configuration/operator-chaining-and-slot-sharing
-          - file: ch-deployment-and-configuration/flink-command-line-interface-guide
-          - file: ch-deployment-and-configuration/hadoop-flink
-          - file: ch-deployment-and-configuration/experiment-job-coding-packaging-and-submission
+          - file: ch-deployment-and-configuration/operator-chaining-slot-sharing
+          - file: ch-deployment-and-configuration/cli
+          - file: ch-deployment-and-configuration/flink-with-hadoop
+          - file: ch-deployment-and-configuration/exercise-job-submission

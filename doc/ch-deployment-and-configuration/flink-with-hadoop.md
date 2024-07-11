@@ -1,4 +1,4 @@
-(hadoop-flink)=
+(sec-flink-with-hadoop)=
 # 与 Hadoop 集成
 
 Flink 可以和 Hadoop 生态圈的组件紧密结合，比如 9.1 节中提到，Flink 可以使用 YARN 作为资源调度器，或者读取 HDFS、HBase 中的数据。在使用 Hadoop 前，我们需要确认已经安装了 Hadoop，并配置了环境变量 `HADOOP_CONF_DIR`，如下环境变量配置是 Hadoop 安装过程所必需的。

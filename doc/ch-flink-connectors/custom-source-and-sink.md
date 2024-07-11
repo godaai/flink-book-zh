@@ -1,4 +1,5 @@
-(custom-source-and-sink)=
+(sec-custom-source-and-sink)=
+
 # 自定义 Source 和 Sink
 
 本节将从原理和实现两个方面来介绍 Flink 的 Source 和 Sink。
