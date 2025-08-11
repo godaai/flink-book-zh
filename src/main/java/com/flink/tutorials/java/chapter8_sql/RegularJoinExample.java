@@ -3,15 +3,17 @@ package com.flink.tutorials.java.chapter8_sql;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple4;
-import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.DataTypes;
+import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.types.Row;
 
-import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,53 +23,72 @@ public class RegularJoinExample {
 
         System.setProperty("user.timezone","GMT+8");
 
-        EnvironmentSettings fsSettings = EnvironmentSettings.newInstance().useBlinkPlanner().inStreamingMode().build();
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        StreamTableEnvironment tEnv = StreamTableEnvironment.create(env, fsSettings);
+        StreamTableEnvironment tEnv = StreamTableEnvironment.create(env);
 
         env.setParallelism(1);
-        env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+        // 事件时间在Flink 2.0中是默认设置，不需要显式设置
 
-        List<Tuple4<Long, Long, String, Timestamp>> userBehaviorData = new ArrayList<>();
-        userBehaviorData.add(Tuple4.of(1L, 1000L, "pv", Timestamp.valueOf("2020-03-06 00:00:00")));
-        userBehaviorData.add(Tuple4.of(2L, 1001L, "pv", Timestamp.valueOf("2020-03-06 00:00:00")));
-        userBehaviorData.add(Tuple4.of(1L, 1000L, "pv", Timestamp.valueOf("2020-03-06 00:00:02")));
-        userBehaviorData.add(Tuple4.of(2L, 1001L, "cart", Timestamp.valueOf("2020-03-06 00:00:03")));
-        userBehaviorData.add(Tuple4.of(2L, 1001L, "buy", Timestamp.valueOf("2020-03-06 00:01:04")));
+        List<Tuple4<Long, Long, String, Instant>> userBehaviorData = new ArrayList<>();
+        userBehaviorData.add(Tuple4.of(1L, 1000L, "pv", LocalDateTime.parse("2020-03-06T00:00:00").atZone(ZoneId.systemDefault()).toInstant()));
+        userBehaviorData.add(Tuple4.of(2L, 1001L, "pv", LocalDateTime.parse("2020-03-06T00:00:00").atZone(ZoneId.systemDefault()).toInstant()));
+        userBehaviorData.add(Tuple4.of(1L, 1000L, "pv", LocalDateTime.parse("2020-03-06T00:00:02").atZone(ZoneId.systemDefault()).toInstant()));
+        userBehaviorData.add(Tuple4.of(2L, 1001L, "cart", LocalDateTime.parse("2020-03-06T00:00:03").atZone(ZoneId.systemDefault()).toInstant()));
+        userBehaviorData.add(Tuple4.of(2L, 1001L, "buy", LocalDateTime.parse("2020-03-06T00:01:04").atZone(ZoneId.systemDefault()).toInstant()));
 
         List<Tuple2<Long, Long>> itemData = new ArrayList<>();
-
         itemData.add(Tuple2.of(1000L, 310L));
         itemData.add(Tuple2.of(1001L, 189L));
 
-        DataStream<Tuple4<Long, Long, String, Timestamp>> userBehaviorStream = env
-                .fromCollection(userBehaviorData)
+        DataStream<Tuple4<Long, Long, String, Instant>> userBehaviorStream = env
+                .fromData(userBehaviorData)
                 .assignTimestampsAndWatermarks(
                         WatermarkStrategy
-                                .<Tuple4<Long, Long, String, Timestamp>>forMonotonousTimestamps()
-                                .withTimestampAssigner((event, timestamp) -> event.f3.getTime())
+                                .<Tuple4<Long, Long, String, Instant>>forMonotonousTimestamps()
+                                .withTimestampAssigner((event, timestamp) -> event.f3.toEpochMilli())
                 );
 
-        Table userBehaviorTable = tEnv.fromDataStream(userBehaviorStream, "user_id, item_id, behavior, ts.rowtime");
+        // 使用Schema Builder定义表结构
+        Table userBehaviorTable = tEnv.fromDataStream(
+                userBehaviorStream,
+                Schema.newBuilder()
+                        .column("f0", DataTypes.BIGINT())       // user_id
+                        .column("f1", DataTypes.BIGINT())       // item_id
+                        .column("f2", DataTypes.STRING())       // behavior
+                        .column("f3", DataTypes.TIMESTAMP_LTZ(3)) // ts
+                        .watermark("f3", "f3 - INTERVAL '0' SECOND")
+                        .build());
         tEnv.createTemporaryView("user_behavior", userBehaviorTable);
 
         DataStream<Tuple2<Long, Long>> itemStream = env
-                .fromCollection(itemData);
-        Table itemTable = tEnv.fromDataStream(itemStream, "item_id, price");
+                .fromData(itemData);
+        
+        // 使用Schema Builder定义表结构
+        Table itemTable = tEnv.fromDataStream(
+                itemStream,
+                Schema.newBuilder()
+                        .column("f0", DataTypes.BIGINT())       // item_id
+                        .column("f1", DataTypes.BIGINT())       // price
+                        .build());
         tEnv.createTemporaryView("item", itemTable);
 
         String sqlQuery = "SELECT \n" +
-                "   user_behavior.item_id," +
-                "   item.price \n" +
+                "   user_behavior.f1 as item_id," +
+                "   item.f1 as price \n" +
                 "FROM " +
                 "   user_behavior, item\n" +
-                "WHERE user_behavior.item_id = item.item_id" +
-                "   AND user_behavior.behavior = 'buy'";
+                "WHERE user_behavior.f1 = item.f0" +
+                "   AND user_behavior.f2 = 'buy'";
 
         Table joinResult = tEnv.sqlQuery(sqlQuery);
-        DataStream<Row> result = tEnv.toAppendStream(joinResult, Row.class);
+        
+        // 在Flink 2.0中，使用toChangelogStream替代toAppendStream
+        DataStream<Row> result = tEnv.toChangelogStream(joinResult);
         result.print();
 
         env.execute("table api");
     }
 }
+
+// 输出
+// +I[1001, 189] 插入item_id为1001，价格为189的记录，符合查询条件

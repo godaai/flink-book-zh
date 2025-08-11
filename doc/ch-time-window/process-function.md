@@ -54,7 +54,7 @@ public void onTimer(long timestamp, OnTimerContext ctx, Collector<O> out)
 我们只能在 `KeyedStream` 上注册 Timer。每个 Key 下可以使用不同的时间戳注册不同的 Timer，但是每个 Key 的每个时间戳只能注册一个 Timer。如果想在一个 `DataStream` 上应用 Timer，可以将所有数据映射到一个伪造的 Key 上，但这样所有数据会流入一个算子子任务。
 :::
 
-我们再次以 [股票交易](../chapter-datastream-api/exercise-stock-basic.md) 场景来解释如何使用 Timer。一次股票交易包括：股票代号、时间戳、股票价格、成交量。我们现在想看一支股票未来是否一直连续上涨，如果一直上涨，则发送出一个提示。如果新数据比上次数据价格更高且目前没有注册 Timer，则注册一个未来的 Timer，如果在这期间价格降低则把刚才注册的 Timer 删除，如果在这期间价格没有降低，Timer 时间到达后触发 `onTimer()`，发送一个提示。下面的代码中，`intervalMills` 表示一个毫秒精度的时间段，如果这个时间段内一支股票价格一直上涨，则会输出文字提示。
+我们再次以 [股票交易](../ch-datastream-api/exercise-stock-basic.md) 场景来解释如何使用 Timer。一次股票交易包括：股票代号、时间戳、股票价格、成交量。我们现在想看一支股票未来是否一直连续上涨，如果一直上涨，则发送出一个提示。如果新数据比上次数据价格更高且目前没有注册 Timer，则注册一个未来的 Timer，如果在这期间价格降低则把刚才注册的 Timer 删除，如果在这期间价格没有降低，Timer 时间到达后触发 `onTimer()`，发送一个提示。下面的代码中，`intervalMills` 表示一个毫秒精度的时间段，如果这个时间段内一支股票价格一直上涨，则会输出文字提示。
 
 ```java
 // 三个泛型分别为 Key、输入、输出
@@ -184,7 +184,7 @@ public class SingleOutputStreamOperator<T> extends DataStream<T> {
 
 这个例子中，`KeyedProcessFunction` 的输出类型是 `String`，而 SideOutput 的输出类型是 `StockPrice`，两者可以不同。
 
-## 在两个流上使用 `ProcessFunction` {#process-on-two-streams}
+## 在两个流上使用 `ProcessFunction`{#process-on-two-streams}
 
 我们在 DataStream API 部分曾提到使用 `connect()` 将两个数据流的合并，如果想从更细的粒度在两个数据流进行一些操作，可以使用 `CoProcessFunction` 或 `KeyedCoProcessFunction`。这两个函数都有 `processElement1()` 和 `processElement2()` 方法，分别对第一个数据流和第二个数据流的每个元素进行处理。第一个数据流类型、第二个数据流类型和经过函数处理后的输出类型可以互不相同。尽管数据来自两个不同的流，但是他们可以共享同样的状态，所以可以参考下面的逻辑来实现两个数据流上的 Join：
 
@@ -241,12 +241,3 @@ public static class JoinStockMediaProcessFunction extends KeyedCoProcessFunction
         mediaState.update(media.status);
     }
 }
-```
-
-这个例子比较简单，没有使用 Timer，实际的业务场景中状态一般用到 Timer 将过期的状态清除。两个数据流的中间数据放在状态中，为避免状态的无限增长，需要使用 Timer 清除过期数据。
-
-很多互联网 APP 的机器学习样本拼接都可能依赖这个函数来实现：服务端的机器学习特征是实时生成的，用户在 APP 上的行为是交互后产生的，两者属于两个不同的数据流，用户行为是机器学习所需要标注的正负样本，因此可以按照这个逻辑来将两个数据流拼接起来，通过拼接更快得到下一轮机器学习的样本数据。
-
-:::info
-使用 Event Time 时，两个数据流必须都设置好 Watermark，只设置一个流的 Event Time 和 Watermark，无法在 `CoProcessFunction` 和 `KeyedCoProcessFunction` 中使用 Timer 功能，因为 `process` 算子无法确定自己应该以怎样的时间来处理数据。
-:::

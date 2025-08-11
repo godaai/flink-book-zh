@@ -1,67 +1,195 @@
-package com.flink.tutorials.java.chapter8_sql;
+package com.flink.tutorials.java.chapter8_sql;// 注意当前在 2.0-preview1 无法运行
+// 保证 flink version为 1.20.0
+// 因为 flink-connector-kafka 没有 2.0 preview1 的版本
 
-import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.streaming.api.TimeCharacteristic;
-import org.apache.flink.streaming.api.datastream.DataStream;
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.table.api.DataTypes;
-import org.apache.flink.table.api.EnvironmentSettings;
-import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
-import org.apache.flink.table.descriptors.Json;
-import org.apache.flink.table.descriptors.Kafka;
-import org.apache.flink.table.descriptors.Rowtime;
-import org.apache.flink.table.descriptors.Schema;
-import org.apache.flink.types.Row;
-
-public class UserBehaviorKafkaConnect {
-
-    public static void main(String[] args) throws Exception {
-
-        EnvironmentSettings fsSettings = EnvironmentSettings.newInstance().useBlinkPlanner().inStreamingMode().build();
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        StreamTableEnvironment tEnv = StreamTableEnvironment.create(env, fsSettings);
-
-        env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
-
-        tEnv
-            // 使用connect()函数连接外部系统 connect()部分地方有bug，未来将被废弃
-            .connect(
-                new Kafka()
-                .version("universal")     // 必填，合法的参数有"0.8", "0.9", "0.10", "0.11"或"universal"
-                .topic("user_behavior")   // 必填，Topic名
-                .startFromEarliest()        // 首次消费时数据读取的位置
-                .property("zookeeper.connect", "localhost:2181")  // Kafka连接参数
-                .property("bootstrap.servers", "localhost:9092")
-            )
-            // 序列化方式 可以是JSON、Avro等
-            .withFormat(new Json())
-            // 数据的Schema
-            .withSchema(
-                new Schema()
-                    .field("user_id", DataTypes.BIGINT())
-                    .field("item_id", DataTypes.BIGINT())
-                    .field("category_id", DataTypes.BIGINT())
-                    .field("behavior", DataTypes.STRING())
-                    .field("ts", DataTypes.TIMESTAMP(3))
-                    .rowtime(new Rowtime().timestampsFromField("ts").watermarksPeriodicAscending())
-            )
-            // 临时表的表名，后续可以在SQL语句中使用这个表名
-            .createTemporaryTable("user_behavior");
-
-        Table all = tEnv.sqlQuery("SELECT * FROM user_behavior");
-        DataStream<Tuple2<Boolean, Row>> allResult = tEnv.toRetractStream(all, Row.class);
-        allResult.print();
-
+//package com.flink.tutorials.java.chapter8_sql;
+//
+//import org.apache.flink.streaming.api.datastream.DataStream;
+//import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+//import org.apache.flink.table.api.ExplainDetail;
+//import org.apache.flink.table.api.Table;
+//import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+//import org.apache.flink.types.Row;
+//import org.apache.kafka.clients.admin.AdminClient;
+//import org.apache.kafka.clients.admin.CreateTopicsResult;
+//import org.apache.kafka.clients.admin.NewTopic;
+//import org.apache.kafka.clients.producer.KafkaProducer;
+//import org.apache.kafka.clients.producer.ProducerConfig;
+//import org.apache.kafka.clients.producer.ProducerRecord;
+//import org.apache.kafka.common.KafkaFuture;
+//import org.apache.kafka.common.serialization.StringSerializer;
+//
+//import java.time.Duration;
+//import java.util.Collections;
+//import java.util.Properties;
+//import java.util.concurrent.ExecutionException;
+//import java.util.stream.IntStream;
+//
+//public class UserBehaviorKafkaConnect {
+//
+//    // Kafka配置常量
+//    private static final String BOOTSTRAP_SERVERS = "localhost:9092";
+//    private static final String TOPIC_NAME = "user_behavior";
+//
+//    /**
+//     * 创建Kafka主题并发送示例数据
+//     */
+//    private static void prepareKafkaTopic() {
+//        System.out.println("开始准备Kafka主题和测试数据...");
+//        Properties adminProps = new Properties();
+//        adminProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
+//
+//        try (AdminClient adminClient = AdminClient.create(adminProps)) {
+//            // 检查主题是否已存在
+//            boolean topicExists = false;
+//            try {
+//                topicExists = adminClient.listTopics().names().get().contains(TOPIC_NAME);
+//            } catch (InterruptedException | ExecutionException e) {
+//                System.err.println("检查主题存在时出错: " + e.getMessage());
+//            }
+//
+//            // 如果主题不存在，则创建
+//            if (!topicExists) {
+//                System.out.println("主题不存在，正在创建...");
+//                NewTopic newTopic = new NewTopic(TOPIC_NAME, 1, (short) 1);
+//                CreateTopicsResult result = adminClient.createTopics(Collections.singleton(newTopic));
+//
+//                try {
+//                    KafkaFuture<Void> future = result.values().get(TOPIC_NAME);
+//                    future.get(); // 等待主题创建完成
+//                    System.out.println("主题创建成功!");
+//                } catch (InterruptedException | ExecutionException e) {
+//                    System.err.println("创建主题时出错: " + e.getMessage());
+//                    return;
+//                }
+//            } else {
+//                System.out.println("主题 '" + TOPIC_NAME + "' 已存在.");
+//            }
+//
+//            // 发送测试数据到主题
+//            sendSampleData();
+//
+//        }
+//    }
+//
+//    /**
+//     * 发送示例用户行为数据到Kafka主题
+//     */
+//    private static void sendSampleData() {
+//        System.out.println("开始发送示例数据到Kafka主题...");
+//        Properties producerProps = new Properties();
+//        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
+//        producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+//        producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+//
+//        try (KafkaProducer<String, String> producer = new KafkaProducer<>(producerProps)) {
+//            // 发送10条示例用户行为数据
+//            long now = System.currentTimeMillis(); // 当前时间（毫秒）
+//
+//            String[] behaviors = {"pv", "buy", "cart", "fav"};
+//
+//            IntStream.range(0, 10).forEach(i -> {
+//                // 用户行为JSON数据
+//                long userId = 1000 + i % 3;  // 用户ID循环使用1000, 1001, 1002
+//                long itemId = 2000 + i;      // 商品ID
+//                long categoryId = 100 + i % 5; // 分类ID
+//                String behavior = behaviors[i % behaviors.length]; // 行为类型
+//                long ts = now + i * 1000;    // 时间戳递增（以毫秒为单位）
+//
+//                String jsonData = String.format(
+//                    "{\"user_id\":%d,\"item_id\":%d,\"category_id\":%d,\"behavior\":\"%s\",\"ts\":%d}",
+//                    userId, itemId, categoryId, behavior, ts
+//                );
+//
+//                ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC_NAME, String.valueOf(i), jsonData);
+//                producer.send(record, (metadata, exception) -> {
+//                    if (exception == null) {
+//                        System.out.println("数据已发送: " + jsonData);
+//                    } else {
+//                        System.err.println("发送数据时出错: " + exception.getMessage());
+//                    }
+//                });
+//            });
+//
+//            // 确保所有消息都已发送
+//            producer.flush();
+//            System.out.println("所有测试数据已发送完成!");
+//        }
+//    }
+//
+//    public static void main(String[] args) throws Exception {
+//        // 先准备Kafka主题和数据
+//        prepareKafkaTopic();
+//
+//        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+//        StreamTableEnvironment tEnv = StreamTableEnvironment.create(env);
+//
+//        // 设置状态保留时间 - 使用 Duration 替代 Time
+//        tEnv.getConfig().setIdleStateRetention(Duration.ofHours(1));
+//
+//        // 使用 SQL DDL 方式创建表，代替旧的 connect API
+//        tEnv.executeSql("CREATE TABLE user_behavior (\n" +
+//                "    user_id BIGINT,\n" +
+//                "    item_id BIGINT,\n" +
+//                "    category_id BIGINT,\n" +
+//                "    behavior STRING,\n" +
+//                "    ts TIMESTAMP(3) METADATA FROM 'timestamp',\n" +
+//                "    WATERMARK FOR ts as ts - INTERVAL '5' SECOND  -- 在ts上定义watermark，ts成为事件时间列\n" +
+//                ") WITH (\n" +
+//                "    'connector' = 'kafka',  -- 使用 kafka connector\n" +
+//                "    'topic' = 'user_behavior',  -- kafka topic\n" +
+//                "    'scan.startup.mode' = 'earliest-offset',  -- 从起始 offset 开始读取\n" +
+//                "    'properties.bootstrap.servers' = 'localhost:9092',  -- kafka broker 地址\n" +
+//                "    'format' = 'json',  -- 数据源格式为 json\n" +
+//                "    'json.fail-on-missing-field' = 'false',  -- 字段缺失时不失败\n" +
+//                "    'json.ignore-parse-errors' = 'true',  -- 忽略解析错误\n" +
+//                "    'json.timestamp-format.standard' = 'SQL'  -- 使用SQL标准时间格式\n" +
+//                ")");
+//
+//        // 简单查询所有数据
+//        Table all = tEnv.sqlQuery("SELECT * FROM user_behavior");
+//        DataStream<Row> allResult = tEnv.toChangelogStream(all);
+//        allResult.print("所有数据:");
+//
+//        // 按用户ID分组查询
+//        Table groupByUserId = tEnv.sqlQuery("SELECT user_id, COUNT(behavior) AS behavior_cnt FROM user_behavior GROUP BY user_id");
+//        DataStream<Row> groupByUserIdResult = tEnv.toChangelogStream(groupByUserId);
+//        groupByUserIdResult.print("按用户分组:");
+//
+//        // 获取ExplainDetail
+//        String explanation = groupByUserId.explain(ExplainDetail.CHANGELOG_MODE);
+//        System.out.println("查询执行计划:\n" + explanation);
+//
+//        // 滚动窗口查询
 //        Table tumbleGroupByUserId = tEnv.sqlQuery("SELECT \n" +
 //                "\tuser_id, \n" +
 //                "\tCOUNT(behavior) AS behavior_cnt, \n" +
 //                "\tTUMBLE_END(ts, INTERVAL '10' SECOND) AS end_ts \n" +
 //                "FROM user_behavior\n" +
 //                "GROUP BY user_id, TUMBLE(ts, INTERVAL '10' SECOND)");
-//        DataStream<Tuple2<Boolean, Row>> result = tEnv.toRetractStream(tumbleGroupByUserId, Row.class);
-//        result.print();
-
-        env.execute("table api");
-    }
-}
+//        DataStream<Row> tumbleResult = tEnv.toChangelogStream(tumbleGroupByUserId);
+//        tumbleResult.print("滚动窗口:");
+//
+//        // 嵌套查询
+//        Table inlineGroupByUserId = tEnv.sqlQuery("" +
+//                "SELECT " +
+//                "    window_end," +
+//                "    user_id," +
+//                "    SUM(cnt) AS total_cnt " +
+//                "FROM (" +
+//                "SELECT \n" +
+//                "\tuser_id, \n" +
+//                "\tCOUNT(behavior) AS cnt, \n" +
+//                "\tTUMBLE_START(ts, INTERVAL '10' SECOND) AS window_start, \n" +
+//                "\tTUMBLE_END(ts, INTERVAL '10' SECOND) AS window_end \n" +
+//                "FROM user_behavior\n" +
+//                "GROUP BY user_id, TUMBLE(ts, INTERVAL '10' SECOND))" +
+//                "GROUP BY window_end, user_id");
+//        DataStream<Row> inlineResult = tEnv.toChangelogStream(inlineGroupByUserId);
+//        inlineResult.print("嵌套查询:");
+//
+//        System.out.println("当前时区: " + tEnv.getConfig().getLocalTimeZone());
+//
+//        env.execute("Kafka Connect 示例");
+//    }
+//}

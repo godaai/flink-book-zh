@@ -11,8 +11,8 @@ public class SimpleConnectExample {
 
         StreamExecutionEnvironment senv = StreamExecutionEnvironment.getExecutionEnvironment();
 
-        DataStream<Integer> intStream  = senv.fromElements(1, 0, 9, 2, 3, 6);
-        DataStream<String> stringStream  = senv.fromElements("LOW", "HIGH", "LOW", "LOW");
+        DataStream<Integer> intStream  = senv.fromData(1, 0, 9, 2, 3, 6);
+        DataStream<String> stringStream  = senv.fromData("LOW", "HIGH", "LOW", "LOW");
 
         ConnectedStreams<Integer, String> connectedStream = intStream.connect(stringStream);
 

@@ -8,10 +8,19 @@ public class TypeCheck {
 
     public static void main(String[] args) {
 
-        System.out.println(TypeInformation.of(StockPrice.class).createSerializer(new ExecutionConfig()));
+        ExecutionConfig executionConfig = new ExecutionConfig();
+        var serializerConfig = executionConfig.getSerializerConfig();
 
-        System.out.println(TypeInformation.of(StockPriceNoGeterSeter.class).createSerializer(new ExecutionConfig()));
+        // 检查 StockPrice 类的序列化器
+        System.out.println("StockPrice Serializer: " +
+                TypeInformation.of(StockPrice.class).createSerializer(serializerConfig));
 
-        System.out.println(TypeInformation.of(StockPriceNoConstructor.class).createSerializer(new ExecutionConfig()));
+        // 检查 StockPriceNoGeterSeter 类的序列化器
+        System.out.println("StockPriceNoGeterSeter Serializer: " +
+                TypeInformation.of(StockPriceNoGeterSeter.class).createSerializer(serializerConfig));
+
+        // 检查 StockPriceNoConstructor 类的序列化器
+        System.out.println("StockPriceNoConstructor Serializer: " +
+                TypeInformation.of(StockPriceNoConstructor.class).createSerializer(serializerConfig));
     }
 }

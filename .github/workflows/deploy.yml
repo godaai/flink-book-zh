@@ -5,6 +5,7 @@ on:
     tags:
       - '*'
 
+        
 jobs:
   build:
     if: github.event.pull_request.merged == true

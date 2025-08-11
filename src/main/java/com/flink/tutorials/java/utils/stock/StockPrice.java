@@ -1,14 +1,16 @@
 package com.flink.tutorials.java.utils.stock;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+
 /**
- * POJO StockPrice
+ * POJO StockPrice for file source examples
  * symbol      股票代号
  * ts          时间戳
  * price       价格
  * volume      交易量
  * mediaStatus 媒体对该股票的评价状态
- * */
-
+ */
+@JsonPropertyOrder({"symbol", "ts", "price", "volume", "mediaStatus"})
 public class StockPrice {
     public String symbol;
     public double price;
@@ -18,7 +20,7 @@ public class StockPrice {
 
     public StockPrice() {}
 
-    public StockPrice(String symbol, double price, long ts, int volume, String mediaStatus){
+    public StockPrice(String symbol, double price, long ts, int volume, String mediaStatus) {
         this.symbol = symbol;
         this.price = price;
         this.ts = ts;
@@ -32,9 +34,12 @@ public class StockPrice {
 
     @Override
     public String toString() {
-        return "(" + this.symbol + "," +
-                this.price + "," + this.ts +
-                "," + this.volume + "," +
-                this.mediaStatus + ")";
+        return "StockPrice{" +
+                "symbol='" + symbol + '\'' +
+                ", price=" + price +
+                ", ts=" + ts +
+                ", volume=" + volume +
+                ", mediaStatus='" + mediaStatus + '\'' +
+                '}';
     }
 }

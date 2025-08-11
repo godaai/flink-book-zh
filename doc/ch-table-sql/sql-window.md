@@ -10,19 +10,15 @@
 
 :::
 
-本节主要讨论如何在 Flink SQL 上使用窗口。
+在流处理中，时间是一个至关重要的维度。无论是基于时间的聚合、Join 操作，还是事件驱动的应用，都需要精确地定义和处理时间。Flink Table API & SQL 提供了强大的时间处理能力，支持基于不同时间语义的窗口操作。
 
-## 时间属性
+## 时间属性 (Time Attributes)
 
-Table API & SQL 支持时间维度上的处理。时间属性（Time Attribute）用一个 `TIMESTAMP(int precision)` 数据类型来表示，这个类型与 SQL 标准中的时间戳类型相对应，是 Table API& SQL 中专门用来表征时间属性的数据类型。`precision` 为精度，表示秒以下保留几位小数点，可以是 0 到 9 的一个数字。具体而言，时间的格式为：
+在流处理中，时间不仅是衡量事件发生的标尺，更是定义计算边界、关联事件和触发操作的核心要素。Flink Table API & SQL 体系中，时间属性（Time Attribute）扮演着这一关键角色，用于精确标识数据记录的发生时刻。该体系采用符合 SQL 标准的 `TIMESTAMP(p)` 或 `TIMESTAMP_LTZ(p)` 数据类型来表示时间属性，其中 `p` 代表精度（precision），即秒以下的小数位数，取值范围为 0 到 9。
 
-```
-year-month-day hour:minute:second[.fractional]
-```
+`TIMESTAMP(p)` 类型表示一个与时区无关的时间戳，其格式通常为 `yyyy-MM-dd HH:mm:ss[.SSS...]`。而 `TIMESTAMP_LTZ(p)`（TIMESTAMP WITH LOCAL TIME ZONE）则表示一个与 UTC 时区关联的时间戳，但在显示或进行时区相关计算时，会根据 Flink 会话配置的本地时区进行转换。在 `TimeWindowJoinExample.java` 示例中，我们看到 `TIMESTAMP_LTZ(3)` 被用来定义事件时间列，这在需要处理跨时区数据或希望时间表示符合本地习惯时非常有用。选择合适的精度（如 `TIMESTAMP(3)` 或 `TIMESTAMP_LTZ(3)` 表示毫秒精度）对于满足大多数流处理场景的需求至关重要。
 
-假如我们想要使用一个纳秒精度的时间，应该声明类型为 `TIMESTAMP(9)`，套用上面的时间格式的话，可以表征从 `0000-01-01 00:00:00.000000000` 到 `9999-12-31 23:59:59.999999999`。绝大多数情况下，我们使用毫秒精度即可，即 `TIMESTAMP(3)`。
-
-当涉及到时间窗口，往往就要涉及到窗口的长度单位，现有的时间单位有 `MILLISECOND`、`SECOND`、`MINUTE`、`HOUR`、`DAY`、`MONTH` 和 `YEAR`。
+除了时间戳本身，定义时间间隔（Interval）对于窗口操作和时间相关的 Join 条件也必不可少。Flink SQL 支持多种标准的时间单位，包括 `MILLISECOND`、`SECOND`、`MINUTE`、`HOUR`、`DAY`、`MONTH` 以及 `YEAR`。这些单位可以用于指定窗口的长度、滑动步长或时间区间，如 `INTERVAL '10' SECOND` 或 `INTERVAL '1' HOUR`，从而构建出灵活且强大的时间驱动型流处理逻辑。
 
 在第五章中，我们曾介绍，Flink 提供了三种时间语义：Processing Time、Ingestion Time 和 Event Time。Processing Time 是数据被机器处理时的系统时间，Ingestion Time 是数据流入 Flink 的时间，Event Time 是数据实际发生的时间。我们在之前章节曾详细探讨这几种时间语义的使用方法，这里我们主要介绍一下在 Table API & SQL 中 Processing Time 和 Event Time 两种时间语义的使用方法。
 
@@ -30,20 +26,33 @@ year-month-day hour:minute:second[.fractional]
 
 ```java
 StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+StreamTableEnvironment tEnv = StreamTableEnvironment.create(env);
 
-// 默认使用 Processing Time
-env.setStreamTimeCharacteristic(TimeCharacteristic.ProcessingTime);
+// 使用 Event Time（推荐）
+DataStream<MyEvent> stream = env.fromSource(...);
+DataStream<MyEvent> withTimestamps = stream.assignTimestampsAndWatermarks(
+    WatermarkStrategy.forMonotonousTimestamps()
+        .withTimestampAssigner((event, timestamp) -> event.getEventTime())
+);
 
-// 使用 IngestionTime
-env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
-
-// 使用 EventTime
-env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+// 使用 Processing Time
+DataStream<MyEvent> stream = env.fromSource(...);
+DataStream<MyEvent> withTimestamps = stream.assignTimestampsAndWatermarks(
+    WatermarkStrategy
+        .<MyEvent>forBoundedOutOfOrderness(Duration.ZERO)
+        .withTimestampAssigner((event, timestamp) -> System.currentTimeMillis())
+);
 ```
 
-同时，我们必须要在 Schema 中指定一个字段为时间属性，否则 Flink 无法知道具体哪个字段与时间相关。
+在 Flink 2.0 中，时间特性的设置主要通过以下方式实现：
 
-指定时间属性时可以有下面几种方式：使用 SQL DDL 或者由 `DataStream` 转为 `Table` 时定义一个时间属性。
+1. **Event Time**: 通过 `WatermarkStrategy` 设置事件时间戳和水印策略。这是处理乱序事件和保证事件时间语义的推荐方式。
+
+2. **Processing Time**: 通过 `WatermarkStrategy` 设置时间戳为当前系统时间。这通常用于不需要水印的场景。
+
+3. **Ingestion Time**: 在 Flink 2.0 中，Ingestion Time 的概念已被弱化，因为 Event Time 和 Processing Time 已经能够覆盖大多数使用场景。如果需要类似 Ingestion Time 的行为，可以通过 Processing Time 来实现。
+
+同时，我们必须要在 Schema 中指定一个字段为时间属性，否则 Flink 无法知道具体哪个字段与时间相关。指定时间属性时可以有下面几种方式：使用 SQL DDL 或者由 `DataStream` 转为 `Table` 时定义一个时间属性。
 
 ### Processing Time
 
@@ -320,7 +329,7 @@ ROWS：按行划分窗口
 
 可以看到，对于输入的每一行数据，都有一行输出。
 
-总结下来，`ROWS OVER WINDOW` 的模式应该按照下面的模式来编写 SQL：
+总结起来，`ROWS OVER WINDOW` 的模式应该按照下面的模式来编写 SQL：
 
 ```sql
 SELECT 
@@ -381,7 +390,7 @@ RANGE：按时间段划分窗口
 
 {numref}`fig-range-over-window` 展示了按时间段划分窗口的基本原理，图中上半部分使用 `UNBOUNDED PRECEDING` 表示起始位置，与 `ROWS` 按行划分不同的是，最后两个元素虽然同时到达，但是他们被划分为一个窗口（图上半部分中的 w4）；下半部分使用 `INTERVAL '2' SECOND` 表示起始位置，窗口的起始点是当前元素减去 2 秒，最后两个元素也被划分到了一个窗口（图下半部分中的 w4）。
 
-总结下来，`RANGE OVER WINDOW` 的格式应该按照下面的模式来编写 SQL：
+总结起来，`RANGE OVER WINDOW` 的格式应该按照下面的模式来编写 SQL：
 
 ```sql
 SELECT 

@@ -17,12 +17,14 @@ Scala 是一门基于 JVM 的编程语言。相比 Java，Scala 的特色是函�
 
 :::
 
-Flink 的核心代码由 Java 和 Scala 编写，为这两种语言提供丰富强大的 API，程序员可根据自己和团队的习惯从 Java 和 Scala 中选择。本书基于以下两点考虑，决定主要以 Java 来演示 Flink 的编程。
+Flink 的核心代码由 Java 编写，为 Java 提供了丰富强大的 API。在 Flink 2.0 中，虽然仍然支持 Scala，但已经不再是主要推荐的开发语言。考虑到以下几点原因，本书将主要使用 Java 来演示 Flink 的编程：
 
-- Flink 目前绝大多数代码和功能均由 Java 实现，考虑到本书会展示一些 Flink 中基于 Java 的源码和接口，为了避免读者在 Java 和 Scala 两种语言间混淆，将主要使用 Java 展示一些 Flink 的核心概念。
-- 不同读者的编程语言基础不一样，Scala 用户往往有一定的 Java 编程基础，而 Java 用户可能对 Scala 并不熟悉。而且 Scala 的语法非常灵活，一不小心可能出现莫名其妙的错误，初学者难以自行解决，而 Scala 相对应的书籍和教程不多。或者说 Scala 用户一般能够兼容 Java，而 Java 用户学习 Scala 的成本较高。
+- Flink 的核心功能和API主要基于Java实现
+- Java的语法更加稳定和易于学习
+- 避免读者在Java和Scala两种语言间混淆
+- Java用户更广泛，学习成本更低
 
-此外，由于大多数 Spark 作业基于 Scala，很多大数据工程师要同时负责 Spark 和 Flink 两套业务逻辑，加上 Flink 的 Scala API 与 Spark 比较接近，本书也会在一些地方提示 Scala 用户在使用 Flink 时的必要注意事项，并在随书附赠的工程中提供 Java 和 Scala 两个版本的代码，方便读者学习。
+此外，由于大多数 Spark 作业基于 Scala，很多大数据工程师要同时负责 Spark 和 Flink 两套业务逻辑，本书会在一些地方提示 Scala 用户在使用 Flink 时的必要注意事项。
 
 ## Python
 

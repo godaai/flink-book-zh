@@ -1,4 +1,4 @@
-(sec-configuration-file)=
+(configuration-file)=
 # 配置文件
 
 在前文的介绍中，我们曾多次提到 Flink 主目录下的 `conf/flink-conf.yaml` 文件，这个文件在作业配置中起到了至关重要的作用。

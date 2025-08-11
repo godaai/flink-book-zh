@@ -29,12 +29,12 @@ Join 示例图
 
 ```scala
 input1.join(input2)
-    .where(<KeySelector>)      <- input1 使用哪个字段作为 Key
-    .equalTo(<KeySelector>)    <- input2 使用哪个字段作为 Key
-    .window(<WindowAssigner>)  <- 指定 WindowAssigner
-    [.trigger(<Trigger>)]      <- 指定 Trigger（可选）
-    [.evictor(<Evictor>)]      <- 指定 Evictor（可选）
-    .apply(<JoinFunction>)     <- 指定 JoinFunction
+    .where(<KeySelector>)      // input1 使用哪个字段作为 Key
+    .equalTo(<KeySelector>)    // input2 使用哪个字段作为 Key
+    .window(<WindowAssigner>)  // 指定 WindowAssigner
+    [.trigger(<Trigger>)]      // 指定 Trigger（可选）
+    [.evictor(<Evictor>)]      // 指定 Evictor（可选）
+    .apply(<JoinFunction>)     // 指定 JoinFunction
 ```
 
 {numref}`fig-join-lifecycle` 展示了 Join 的大致过程。两个输入数据流先分别按 Key 进行分组，然后将元素划分到窗口中。窗口的划分需要使用 `WindowAssigner` 来定义，这里可以使用 Flink 提供的滚动窗口、滑动窗口或会话窗口等默认的 `WindowAssigner`。随后两个数据流中的元素会被分配到各个窗口上，也就是说一个窗口会包含来自两个数据流的元素。相同窗口内的数据会以内连接（Inner Join）的语义来相互关联，形成一个数据对。当窗口的时间结束，Flink 会调用 `JoinFunction` 来对窗口内的数据对进行处理。当然，我们也可以使用 `Trigger` 或 `Evictor` 做一些自定义优化，他们的使用方法和普通窗口的使用方法一样。
@@ -79,7 +79,7 @@ DataStream<Tuple2<String, Integer>> input2 = ...
 DataStream<String> joinResult = input1.join(input2)
     .where(i1 -> i1.f0)
     .equalTo(i2 -> i2.f0)
-    .window(TumblingProcessingTimeWindows.of(Time.seconds(60)))
+    .window(TumblingProcessingTimeWindows.of(Duration.ofSeconds(60)))
     .apply(new MyJoinFunction());
 ```
 
@@ -107,7 +107,7 @@ DataStream<Tuple2<String, Integer>> input2 = ...
 DataStream<String> coGroupResult = input1.coGroup(input2)
       .where(i1 -> i1.f0)
       .equalTo(i2 -> i2.f0)
-      .window(TumblingProcessingTimeWindows.of(Time.seconds(10)))
+      .window(TumblingProcessingTimeWindows.of(Duration.ofSeconds(10)))
       .apply(new MyCoGroupFunction());
 ```
 
@@ -153,7 +153,7 @@ DataStream<Tuple3<String, Long, Integer>> input2 = ...
 
 DataStream<String> intervalJoinResult = input1.keyBy(i -> i.f0)
       .intervalJoin(input2.keyBy(i -> i.f0))
-      .between(Time.milliseconds(-5), Time.milliseconds(10))
+      .between(Duration.ofMillis(-5), Duration.ofMillis(10))
       .process(new MyProcessFunction());
 ```
 
@@ -162,7 +162,7 @@ DataStream<String> intervalJoinResult = input1.keyBy(i -> i.f0)
 ```java
 DataStream<String> intervalJoinResult = input1.keyBy(i -> i.f0)
       .intervalJoin(input2.keyBy(i -> i.f0))
-      .between(Time.milliseconds(-5), Time.milliseconds(10))
+      .between(Duration.ofMillis(-5), Duration.ofMillis(10))
       .upperBoundExclusive()
       .lowerBoundExclusive()
       .process(new MyProcessFunction());

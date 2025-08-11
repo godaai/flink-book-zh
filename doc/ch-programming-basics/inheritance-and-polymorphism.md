@@ -98,9 +98,53 @@ class ClassA extends Move with InterfaceA, InterfaceB {
 
 接口与类的主要区别在于，从功能上来说，接口强调特定功能，类强调所属关系；从技术实现上来说，接口里提供的都是抽象方法，类中只有用 `abstract` 关键字定义的方法才是抽象方法。抽象方法是指只定义了方法签名，没有定义具体实现的方法。实现一个子类时，遇到抽象方法必须去做自己的实现。继承并实现接口时，要实现里面所有的方法，否则会报错。
 
+另外，Java/Scala 中还提供了抽象类（abstract class）的概念。抽象类是不能被实例化的类，它通常包含一个或多个抽象方法。抽象类的子类必须实现这些抽象方法，除非子类本身也是抽象类。抽象类的使用场景包括：
+
+1. 当一个类中包含多个抽象方法时，可以将这个类声明为抽象类
+2. 当一个类中包含一些方法的实现，但这些实现可能需要被子类重写时
+3. 当需要为一组相关类提供统一的接口时
+
+```java
+public abstract class Animal {
+    private String name;
+    private String description;
+
+    public Animal(String myName, String myDescription) { 
+        this.name = myName; 
+        this.description = myDescription;
+    } 
+
+    public abstract void move();  // 抽象方法
+    
+    public void eat(){ 
+        System.out.println(name + "正在吃"); 
+    }
+}
+```
+
 :::
 
 在 Flink API 调用过程中，绝大多数情况下都继承一个父类或接口。对于 Java 用户来说，如果继承一个接口，就要使用 `implements` 关键字；如果继承一个类，要使用 `extends` 关键字。对于 Scala 用户来说，绝大多数情况使用 `extends` 关键字就足够了。
+
+:::{note}
+
+在 Java/Scala 中，使用 `final` 关键字可以禁止继承或方法重写：
+
+1. `final class`：声明一个类为最终类，不能被继承
+2. `final method`：声明一个方法为最终方法，不能被重写
+3. `final variable`：声明一个变量为常量，不能被修改
+
+```java
+public final class FinalClass {  // 不能被继承的类
+    public final void method() {  // 不能被重写的方法
+        // 方法实现
+    }
+}
+```
+
+使用 `final` 关键字的主要目的是保护代码，防止被意外修改。在 Flink 开发中，某些关键类和方法可能会被声明为 final，以确保其行为不会被意外改变。
+
+:::
 
 ## 重写与重载
 

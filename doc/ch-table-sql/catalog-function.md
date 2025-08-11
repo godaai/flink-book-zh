@@ -10,314 +10,467 @@
 
 :::
 
-System Function 给我们提供了大量内置功能，但对于一些特定领域或特定场景，System Function 还远远不够，Flink 提供了用户自定义函数功能，开发者可以实现一些特定的需求。用户自定义函数需要注册到 Catalog 中，因此这类函数又被称为 Catalog Function。Catalog Function 大大增强了 Flink SQL 的表达能力。
+虽然 Flink 提供了丰富的[内置函数（System Functions）](system-function.md)来满足常见的计算需求，例如数学运算、字符串处理和聚合等，但在许多特定领域或业务场景下，这些内置函数可能并不足够。为了应对这些情况，Flink 允许开发者使用 Java、Scala 或 Python 编写自己的**用户自定义函数（User-Defined Functions, UDFs）**。
 
-## 注册函数
+这些自定义函数极大地扩展了 Flink SQL 和 Table API 的处理能力，让你可以轻松实现特定的业务逻辑。由于自定义函数需要在使用前注册到 Flink 的 Catalog 中，它们有时也被称为 **Catalog Function**。
 
-在使用一个函数前，一般需要将这个函数注册到 Catalog 中。注册时需要调用 `TableEnvironment` 中的 `registerFunction` 方法。每个 `TableEnvironment` 都会有一个成员 `FunctionCatalog`，`FunctionCatalog` 中存储了函数的定义，当注册函数时，实际上是将这个函数名和对应的实现写入到 `FunctionCatalog` 中。以注册一个 `ScalarFunction` 为例，它在源码中如下：
+在本节中，我们将深入探讨如何创建和使用不同类型的用户自定义函数。
+
+## 函数的注册与使用
+
+无论创建哪种类型的 UDF，基本流程都类似：
+
+1.  **定义函数**：创建一个类，继承 Flink 提供的特定函数基类（例如 `ScalarFunction`, `TableFunction`, `AggregateFunction`），并实现其核心逻辑方法（通常是 `eval` 方法）。
+2.  **注册函数**：在 `TableEnvironment` 中，使用 `registerFunction` 方法将你的自定义函数实例注册到 Catalog 中，并为其指定一个唯一的名称。
+3.  **调用函数**：在 Table API 或 SQL 查询中，通过注册时指定的名称来调用你的自定义函数。
+
+下面是 `TableEnvironment` 中注册函数的基本接口示例（以 `ScalarFunction` 为例）：
 
 ```java
-FunctionCatalog functionCatalog = ...
+// 获取内部的 FunctionCatalog
+FunctionCatalog functionCatalog = tableEnv.getFunctionCatalog();
 
 /**
-  * 注册一个 ScalaFunction
-  * name: 函数名
-  * function: 一个自定义的 ScalaFunction
+  * 注册一个 ScalarFunction
+  * @param name 函数在 SQL/Table API 中使用的名称
+  * @param function 自定义的 ScalarFunction 实例
   */
 public void registerFunction(String name, ScalarFunction function) {
-		functionCatalog.registerTempSystemScalarFunction(
-			name,
-			function);
+    // 实际上是将函数注册到 FunctionCatalog 中
+    functionCatalog.registerTempSystemScalarFunction(name, function);
 }
 ```
 
-在 Flink 提供的 [System Function](system-function.md) 中，我们已经提到，内置的 System Function 提供了包括数学、比较、字符串、聚合等常用功能，如果这些内置的 System Function 无法满足我们的需求，我们可以使用 Java、Scala 和 Python 语言自定义一个函数。接下来我们将将详细讲解如何自定义函数以及如何使用函数。
+接下来，我们将分别详细介绍三种主要的 UDF 类型：标量函数、表函数和聚合函数。
 
-## 标量函数
+## 标量函数（Scalar Function）
 
-标量函数（Scalar Function）接收零个、一个或者多个输入，输出一个单值标量。这里以处理经纬度为例来展示如何自定义 Scala Function。
+**标量函数**是最常见的 UDF 类型。它接收零个、一个或多个输入值，并返回**一个单独的标量值**。这与大多数编程语言中的标准函数非常相似。
 
-当前，大量的应用极度依赖地理信息（Geographic Information）：打车软件需要用户用户定位起点和终点、外卖平台需要确定用户送餐地点、运动类 APP 会记录用户的活动轨迹等。我们一般使用精度（Longitude）和纬度（Latitude）来标记一个地点。经纬度作为原始数据很难直接拿来分析，需要做一些转化，而 Table API & SQL 中没有相应的函数，因此需要我们自己来实现。
+**应用场景**：当你需要对一行数据中的一个或多个字段进行计算，并得出一个单一结果时，标量函数是理想的选择。例如，格式化字符串、进行数学计算、或根据某些条件返回布尔值等。
 
-如果想自定义函数，我们需要继承 `org.apache.flink.table.functions.ScalarFunction` 类，实现 `eval` 方法。这与第四章介绍的 DataStream API 中算子自定义有异曲同工之处。假设我们需要判断一个经纬度数据是否在北京四环以内，可以使用 Java 实现下面的函数：
+**示例：判断地理坐标是否在指定区域内**
+
+假设我们正在处理包含经纬度信息的数据流，例如打车软件的订单数据或运动轨迹记录。我们想判断某个坐标点是否位于北京四环以内。由于 Flink 内置函数没有直接提供这种地理围栏功能，我们需要自定义一个标量函数来实现。
+
+**1. 定义函数 `IsInFourRing`**
+
+我们需要创建一个 Java 类 `IsInFourRing`，继承 `org.apache.flink.table.functions.ScalarFunction`，并实现 `eval` 方法来执行判断逻辑。
+
+```java
+import org.apache.flink.table.functions.ScalarFunction;
+
+public class IsInFourRing extends ScalarFunction {
+
+    // 定义北京四环的大致经纬度边界
+    private static final double LON_EAST = 116.48;
+    private static final double LON_WEST = 116.27;
+    private static final double LAT_NORTH = 39.988;
+    private static final double LAT_SOUTH = 39.83;
+
+    // 核心逻辑：判断输入的经纬度是否在四环内
+    // eval 方法的名称是固定的，Flink 会自动调用它
+    // 参数类型和返回值类型定义了函数的签名
+    public boolean eval(double lon, double lat) {
+        return !(lon > LON_EAST || lon < LON_WEST) &&
+               !(lat > LAT_NORTH || lat < LAT_SOUTH);
+    }
+}
+```
+
+在这个例子中，`eval` 方法接收两个 `double` 类型的参数（经度和纬度），并返回一个 `boolean` 类型的结果。
+
+**2. 注册函数**
+
+在使用这个函数之前，我们需要在 `TableEnvironment` 中注册它：
+
+```java
+// 假设 tEnv 是一个 TableEnvironment 实例
+tEnv.registerFunction("IsInFourRing", new IsInFourRing());
+```
+
+这里我们将 `IsInFourRing` 类的一个实例注册到 Catalog 中，并指定其在 SQL 中使用的名称为 `IsInFourRing`。
+
+**3. 在 SQL 中调用函数**
+
+现在，我们可以在 SQL 查询的 `WHERE` 子句或其他允许标量函数的地方调用它了：
+
+```java
+// 假设 geoTable 是一个包含经纬度字段（long, lat）的表
+Table geoTable = ...; 
+tEnv.createTemporaryView("geo", geoTable);
+
+// 使用自定义函数进行查询
+Table inFourRingTab = tEnv.sqlQuery("SELECT id FROM geo WHERE IsInFourRing(long, lat)");
+```
+
+**函数重载**
+
+与 Java/Scala 中的方法一样，你也可以为同一个函数名定义多个 `eval` 方法，只要它们的参数类型不同即可。Flink 会根据调用时传入的参数类型自动选择合适的 `eval` 方法。例如，我们可以为 `IsInFourRing` 添加处理 `float` 或 `String` 类型输入的方法：
 
 ```java
 public class IsInFourRing extends ScalarFunction {
+    // ... 四环边界定义 ...
 
-    // 北京四环经纬度范围
-    private static double LON_EAST = 116.48;
-    private static double LON_WEST = 116.27;
-    private static double LAT_NORTH = 39.988;
-    private static double LAT_SOUTH = 39.83;
+    // 处理 double 类型
+    public boolean eval(double lon, double lat) { ... }
 
-    // 判断输入的经纬度是否在四环内
-    public boolean eval(double lon, double lat) {
-        return !(lon > LON_EAST || lon < LON_WEST) &&
-                !(lat > LAT_NORTH || lat < LAT_SOUTH);
+    // 处理 float 类型
+    public boolean eval(float lon, float lat) {
+        // 可以将 float 转为 double 再调用上面的方法，或者直接比较
+        return eval((double)lon, (double)lat);
     }
-}
-```
 
-在这个实现中，`eval` 方法接收两个 `double` 类型的输入，对数据进行处理，生成一个 `boolean` 类型的输出。整个类中最重要的地方是 `eval` 方法，它决定了这个自定义函数的内在逻辑。自定义好函数之后，我们还需要用 `registerFunction` 方法将这个函数注册到 Catalog 中，并为之起名为 `IsInFourRing`，这样就可以在 SQL 语句中使用 `IsInFourRing` 的这个名字进行计算了。
-
-```java
-List<Tuple4<Long, Double, Double, Timestamp>> geoList = new ArrayList<>();
-geoList.add(Tuple4.of(1L, 116.2775, 39.91132, Timestamp.valueOf("2020-03-06 00:00:00")));
-geoList.add(Tuple4.of(2L, 116.44095, 39.88319, Timestamp.valueOf("2020-03-06 00:00:01")));
-geoList.add(Tuple4.of(3L, 116.25965, 39.90478, Timestamp.valueOf("2020-03-06 00:00:02")));
-geoList.add(Tuple4.of(4L, 116.27054, 39.87869, Timestamp.valueOf("2020-03-06 00:00:03")));
-
-DataStream<Tuple4<Long, Double, Double, Timestamp>> geoStream = env
-            .fromCollection(geoList)
-            .assignTimestampsAndWatermarks(new AscendingTimestampExtractor<Tuple4<Long, Double, Double, Timestamp>>() {
-                @Override
-                public long extractAscendingTimestamp(Tuple4<Long, Double, Double, Timestamp> element) {
-                    return element.f3.getTime();
-                }
-            });
-
-// 创建表
-Table geoTable = tEnv.fromDataStream(geoStream, "id, long, alt, ts.rowtime, proc.proctime");
-tEnv.createTemporaryView("geo", geoTable);
-
-// 注册函数到 Catalog 中，指定名字为 IsInFourRing
-tEnv.registerFunction("IsInFourRing", new IsInFourRing());
-
-// 在 SQL 语句中使用 IsInFourRing 函数
-Table inFourRingTab = tEnv.sqlQuery("SELECT id FROM geo WHERE IsInFourRing(long, alt)");
-```
-
-我们也可以利用编程语言的重载特性，针对不同类型的输入设计不同的函数。假如经纬度参数以 `float` 或者 `String` 形式传入，为了适应这些输入，可以实现多个 `eval` 方法，让编译器帮忙做重载：
-
-```java
-public boolean eval(double lon, double lat) {
-    return !(lon > LON_EAST || lon < LON_WEST) &&
-      			!(lat > LAT_NORTH || lat < LAT_SOUTH);
-}
-
-public boolean eval(float lon, float lat) {
-    return !(lon > LON_EAST || lon < LON_WEST) &&
-            !(lat > LAT_NORTH || lat < LAT_SOUTH);
-}
-
-public boolean eval(String lonStr, String latStr) {
-    double lon = Double.parseDouble(lonStr);
-    double lat = Double.parseDouble(latStr);
-    return !(lon > LON_EAST || lon < LON_WEST) &&
-            !(lat > LAT_NORTH || lat < LAT_SOUTH);
-}
-```
-
-`eval` 方法的输入和输出类型决定了 `ScalarFunction` 的输入输出类型。在具体的执行过程中，Flink 的类型系统会自动推测输入和输出类型，一些无法被自动推测的类型可以使用 `DataTypeHint` 来提示 Flink 使用哪种输入输出类型。下面的代码接收两个 `Timestamp` 作为输入，返回两个时间戳之间的差，用 `DataTypeHint` 来提示将返回结果转化为 `BIGINT` 类型。
-
-```java
-public class TimeDiff extends ScalarFunction {
-
-    public @DataTypeHint("BIGINT")long eval(Timestamp first, Timestamp second) {
-        return java.time.Duration.between(first.toInstant(), second.toInstant()).toMillis();
-    }
-}
-```
-
-`DataTypeHint` 一般可以满足绝大多数的需求，如果类型仍然复杂，开发者可以自己重写 `UserDefinedFunction#getTypeInference(DataTypeFactory)` 方法，返回合适的类型。
-
-## 表函数
-
-另一种常见的用户自定义函数为表函数（Table Function）。Table Function 能够接收零到多个标量输入，与 Scalar Function 不同的是，Table Function 输出零到多行，每行数据一到多列。从这些特征来看，Table Function 更像是一个表，一般出现在 `FROM` 之后。我们在 [Temporal Table Join](sql-join) 中提到的 Temporal Table 就是一种 Table Function。
-
-为了定义 Table Function，我们需要继承 `org.apache.flink.table.functions.TableFunction` 类，然后实现 `eval` 方法，这与 Scalar Function 几乎一致。同样，我们可以利用重载，实现一到多个 `eval` 方法。与 Scala Function 中只输出一个标量不同，Table Function 可以输出零到多行，`eval` 方法里使用 `collect` 方法将结果输出，输出的数据类型由 `TableFunction<T>` 中的泛型 T 决定。
-
-下面的代码将字符串输入按照 `#` 切分，输出零到多行，输出类型为 `String`。
-
-```java
-public class TableFunc extends TableFunction<String> {
-
-    // 按 #切分字符串，输出零到多行
-    public void eval(String str) {
-        if (str.contains("#")) {
-            String[] arr = str.split("#");
-            for (String i: arr) {
-                collect(i);
-            }
+    // 处理 String 类型
+    public boolean eval(String lonStr, String latStr) {
+        try {
+            double lon = Double.parseDouble(lonStr);
+            double lat = Double.parseDouble(latStr);
+            return eval(lon, lat);
+        } catch (NumberFormatException e) {
+            // 处理无效的字符串输入，例如返回 false
+            return false;
         }
     }
 }
 ```
 
-在主逻辑中，我们需要使用 `registerFunction` 方法注册函数，并指定一个名字。在 SQL 语句中，使用 `LATERAL TABLE(<TableFunctionName>)` 来调用这个 Table Function。
+**类型推断与提示 (`DataTypeHint`)**
+
+通常，Flink 的类型系统能够自动推断出 `eval` 方法的输入和输出类型。但在某些情况下，特别是涉及到泛型或复杂类型时，自动推断可能会失败或不够精确。这时，你可以使用 `@DataTypeHint` 注解来明确指定类型。
+
+例如，下面的函数计算两个时间戳之间的毫秒差，并提示 Flink 返回结果应为 `BIGINT` 类型：
 
 ```java
-List<Tuple4<Integer, Long, String, Timestamp>> list = new ArrayList<>();
-list.add(Tuple4.of(1, 1L, "Jack#22", Timestamp.valueOf("2020-03-06 00:00:00")));
-list.add(Tuple4.of(2, 2L, "John#19", Timestamp.valueOf("2020-03-06 00:00:01")));
-list.add(Tuple4.of(3, 3L, "nosharp", Timestamp.valueOf("2020-03-06 00:00:03")));
+import org.apache.flink.table.annotation.DataTypeHint;
+import org.apache.flink.table.functions.ScalarFunction;
+import java.sql.Timestamp;
 
-DataStream<Tuple4<Integer, Long, String, Timestamp>> stream = env
-            .fromCollection(list)
-            .assignTimestampsAndWatermarks(new AscendingTimestampExtractor<Tuple4<Integer, Long, String, Timestamp>>() {
-                @Override
-                public long extractAscendingTimestamp(Tuple4<Integer, Long, String, Timestamp> element) {
-                    return element.f3.getTime();
-                }
-            });
-// 获取 Table
-Table table = tEnv.fromDataStream(stream, "id, long, str, ts.rowtime");
-tEnv.createTemporaryView("input_table", table);
+public class TimeDiff extends ScalarFunction {
 
-// 注册函数到 Catalog 中，指定名字为 Func
-tEnv.registerFunction("Func", new TableFunc());
-
-// input_table 与 LATERAL TABLE(Func(str)) 进行 JOIN
-Table tableFunc = tEnv.sqlQuery("SELECT id, s FROM input_table, LATERAL TABLE(Func(str)) AS T(s)");
+    // 使用 @DataTypeHint 指定输出类型为 BIGINT
+    @DataTypeHint("BIGINT")
+    public Long eval(Timestamp t1, Timestamp t2) {
+        if (t1 == null || t2 == null) {
+            return null;
+        }
+        return t1.getTime() - t2.getTime(); // 返回毫秒差
+    }
+}
 ```
 
-在这个例子中，`LATERAL TABLE(Func(str))` 接受 `input_table` 中字段 `str` 作为输入，被命名为一个新表，名为 `T`，`T` 中有一个字段 `s`,`s` 是我们刚刚自定义的 `TableFunc` 的输出。本例中，`input_table` 和 `LATERAL TABLE(Func(str))` 之间使用逗号 `,` 隔开，实际上这两个表是按照 `CROSS JOIN` 方式连接起来的，或者说，这两个表在做笛卡尔积，这个 SQL 语句返回值为：
+如果 `@DataTypeHint` 仍然无法满足需求，你可以重写 `UserDefinedFunction` 基类中的 `getTypeInference(DataTypeFactory)` 方法，实现更复杂的自定义类型推断逻辑。
 
-```
-1,22
-1,Jack
-2,19
-2,John
-```
+## 表函数（Table Function）
 
-我们也可以使用其他类型的 `JOIN`，比如 `LEFT JOIN`：
+**表函数**与标量函数的主要区别在于其输出：标量函数输出单个值，而表函数可以输出**零行、一行或多行数据**，每行可以包含一列或多列。
+
+**应用场景**：当你需要根据输入参数生成一个“表”时，表函数非常有用。最典型的例子是字符串拆分（如按分隔符拆分一个字段生成多行）或解析 JSON/XML 结构。在 [SQL Join](sql-join.md) 中介绍的 Temporal Table Function 也是表函数的一种特殊形式。
+
+**定义与使用**
+
+定义表函数需要继承 `org.apache.flink.table.functions.TableFunction<T>`，其中泛型 `T` 定义了输出行的类型。核心逻辑同样在 `eval` 方法中实现，但你需要使用 `collect(T output)` 方法来输出每一行结果。
+
+**示例：按分隔符拆分字符串**
+
+假设我们有一个包含用户信息的字段，格式为 `Name#Age`，我们想将其拆分成两行：一行是名字，一行是年龄（虽然这个例子有点刻意，但能说明问题）。
+
+**1. 定义函数 `SplitSharp`**
 
 ```java
-// input_table 与 LATERAL TABLE(Func(str)) 进行 LEFT JOIN
-Table joinTableFunc = tEnv.sqlQuery("SELECT id, s FROM input_table LEFT JOIN LATERAL TABLE(Func(str)) AS T(s) ON TRUE");
+import org.apache.flink.table.functions.TableFunction;
+import org.apache.flink.types.Row; // 通常输出多列时使用 Row
+import org.apache.flink.table.annotation.DataTypeHint;
+import org.apache.flink.table.annotation.FunctionHint;
+
+// @FunctionHint 提供了关于输出类型的元信息
+@FunctionHint(output = @DataTypeHint("ROW<word STRING, length INT>"))
+public class SplitSharp extends TableFunction<Row> {
+
+    public void eval(String str) {
+        if (str == null) {
+            return; // 不输出任何行
+        }
+        String[] parts = str.split("#");
+        for (String part : parts) {
+            // 使用 collect 输出一行，包含两个字段：单词和长度
+            collect(Row.of(part, part.length()));
+        }
+    }
+}
 ```
 
-`ON TRUE` 条件表示所有左侧表中的数据都与右侧进行 Join，因此结果中多出了一行 `3,null`。
+在这个例子中，我们输出了 `Row` 类型，每行包含一个 `String` 和一个 `Integer`。我们还使用了 `@FunctionHint` 和 `@DataTypeHint` 来明确指定输出的结构。
 
-```
-1,22
-1,Jack
-2,19
-2,John
-3,null
+**2. 注册函数**
+
+```java
+tEnv.registerFunction("SplitSharpFunc", new SplitSharp());
 ```
 
-## 聚合函数
+**3. 在 SQL 中调用函数**
 
-在 System Function 中我们曾介绍了聚合函数，聚合函数一般将多行数据进行聚合，输出一个标量。常用的聚合函数有 `COUNT`、`SUM` 等。对于一些特定问题，这些内置函数可能无法满足需求，在 Flink SQL 中，用户可以对聚合函数进行用户自定义，这种函数被称为用户自定义聚合函数（User-Defined Aggregate Function）。
+表函数通常出现在 SQL 的 `FROM` 子句中，并与主表进行 `JOIN`。你需要使用 `LATERAL TABLE(<FunctionName>(input_column))` 语法来调用它。
 
-假设我们的表中有下列字段：`id`、数值 `v`、权重 `w`，我们对 `id` 进行 `GROUP BY`，计算 `v` 的加权平均值。计算的过程如下表所示。
+```java
+// 假设 input_table 有一个字段 str，格式为 'Name#Age'
+Table input_table = ...;
+tEnv.createTemporaryView("input_table", input_table);
 
-```{figure} ./img/aggregate.png
----
-name: fig-user-defined-aggregate
-width: 80%
-align: center
----
-用户自定义聚合函数：求加权平均
+// 调用表函数，并将其输出命名为 T，包含 word 和 length 两个字段
+// 使用逗号表示 CROSS JOIN
+Table result = tEnv.sqlQuery(
+    "SELECT id, word, length " +
+    "FROM input_table, LATERAL TABLE(SplitSharpFunc(str)) AS T(word, length)"
+);
+
+// 也可以使用 LEFT JOIN，这样即使 str 无法拆分（或为 null），原始表的行也会保留
+Table leftJoinResult = tEnv.sqlQuery(
+    "SELECT id, T.word, T.length " +
+    "FROM input_table LEFT JOIN LATERAL TABLE(SplitSharpFunc(str)) AS T(word, length) ON TRUE"
+);
 ```
 
-下面的代码实现了一个加权平均函数 `WeightedAvg`，这个函数接收两个 `Long` 类型的输入，返回一个 `Double` 类型的输出。计算过程基于累加器 `WeightedAvgAccum`，它记录了当前加权和 `sum` 以及权重 `weight`。
+`LATERAL` 关键字是必需的，它表示表函数会针对 `input_table` 的**每一行**进行调用，并将输入行的列（如 `id`）与表函数产生的输出行（`word`, `length`）结合起来。
+`AS T(word, length)` 为表函数产生的输出表及其列指定了别名。
+
+`ON TRUE` 用于 `LEFT JOIN`，表示左表的每一行都应该尝试与右侧（表函数输出）进行连接。
+
+## 聚合函数（Aggregate Function）
+
+**聚合函数（Aggregate Function, AggFunction）** 用于将一个表（或一个分组）中的多行数据聚合成一个标量值。常见的内置聚合函数有 `COUNT`, `SUM`, `AVG`, `MAX`, `MIN` 等。
+
+**应用场景**：当你需要对一组数据进行汇总计算时，例如计算总和、平均值、最大/最小值，或者实现更复杂的自定义聚合逻辑（如加权平均、计算中位数等）。
+
+**定义与使用**
+
+自定义聚合函数需要继承 `org.apache.flink.table.functions.AggregateFunction<T, ACC>`。这里有两个泛型参数：
+*   `T`: 最终聚合结果的类型。
+*   `ACC`: 累加器（Accumulator）的类型。累加器是在聚合过程中用于存储中间状态的对象。
+
+你需要实现以下核心方法：
+
+*   `createAccumulator()`: 创建并初始化一个累加器实例。对于每个聚合分组，Flink 会调用一次此方法。
+*   `accumulate(ACC accumulator, [input_values...])`: 核心的累加逻辑。每当有一行新的输入数据到达时，Flink 会调用此方法，传入当前的累加器和输入值。你需要在此方法中更新累加器的状态。
+*   `getValue(ACC accumulator)`: 在所有输入行都处理完毕后，Flink 调用此方法，传入最终的累加器状态，并要求返回最终的聚合结果（类型为 `T`）。
+
+此外，根据具体的应用场景（例如会话窗口聚合、Retraction 场景），可能还需要实现其他方法：
+
+*   `retract(ACC accumulator, [input_values...])`: （可选）用于处理数据的撤回（retraction）。当需要从累加器中移除之前某个输入值的影响时调用。
+*   `merge(ACC accumulator, Iterable<ACC> its)`: （可选）用于合并多个累加器。在某些场景下（如会料窗口或批处理的部分聚合），Flink 可能需要将分属于同一分组但分布在不同累加器中的状态合并起来。
+*   `resetAccumulator(ACC accumulator)`: （可选）重置累加器状态。
+
+**示例：计算加权平均值**
+
+假设我们要计算一组数值的加权平均值，其中每行数据包含一个值（`value`）和一个权重（`weight`）。加权平均值的计算公式是 `Sum(value * weight) / Sum(weight)`。
+
+**1. 定义累加器 `WeightedAvgAccumulator`**
+
+我们需要一个累加器来存储 `Sum(value * weight)` 和 `Sum(weight)`。
+
+```java
+/**
+ * 累加器，用于存储加权平均计算的中间状态：
+ * - sum: value * weight 的总和
+ * - count: weight 的总和
+ */
+public class WeightedAvgAccumulator {
+    public long sum = 0;
+    public int count = 0;
+}
+```
+
+**2. 定义聚合函数 `WeightedAvg`**
 
 ```java
 import org.apache.flink.table.functions.AggregateFunction;
-import java.util.Iterator;
 
 /**
- * 加权平均函数
+ * 自定义聚合函数，计算加权平均值。
+ * 输入: (BIGINT value, INT weight)
+ * 输出: DOUBLE
+ * 累加器: WeightedAvgAccumulator
  */
-public class WeightedAvg extends AggregateFunction<Double, WeightedAvg.WeightedAvgAccum> {
+public class WeightedAvg extends AggregateFunction<Double, WeightedAvgAccumulator> {
 
     @Override
-    public WeightedAvgAccum createAccumulator() {
-        return new WeightedAvgAccum();
+    public WeightedAvgAccumulator createAccumulator() {
+        // 初始化累加器
+        return new WeightedAvgAccumulator();
     }
 
-    // 需要物化输出时，getValue 方法会被调用
+    // 核心累加逻辑
+    public void accumulate(WeightedAvgAccumulator acc, long value, int weight) {
+        acc.sum += value * weight;
+        acc.count += weight;
+    }
+
+    // 可选：处理数据撤回（例如在更新场景下）
+    public void retract(WeightedAvgAccumulator acc, long value, int weight) {
+        acc.sum -= value * weight;
+        acc.count -= weight;
+    }
+
     @Override
-    public Double getValue(WeightedAvgAccum acc) {
-        if (acc.weight == 0) {
-            return null;
+    public Double getValue(WeightedAvgAccumulator acc) {
+        // 计算最终结果
+        if (acc.count == 0) {
+            return null; // 或者返回 0.0，取决于业务需求
         } else {
-            return (double) acc.sum / acc.weight;
+            return (double) acc.sum / acc.count;
         }
     }
 
-    // 新数据到达时，更新 ACC
-    public void accumulate(WeightedAvgAccum acc, long iValue, long iWeight) {
-        acc.sum += iValue * iWeight;
-        acc.weight += iWeight;
-    }
-
-    // 用于 BOUNDED OVER WINDOW，将较早的数据剔除
-    public void retract(WeightedAvgAccum acc, long iValue, long iWeight) {
-        acc.sum -= iValue * iWeight;
-        acc.weight -= iWeight;
-    }
-
-    // 将多个 ACC 合并为一个 ACC
-    public void merge(WeightedAvgAccum acc, Iterable<WeightedAvgAccum> it) {
-        Iterator<WeightedAvgAccum> iter = it.iterator();
-        while (iter.hasNext()) {
-            WeightedAvgAccum a = iter.next();
-            acc.weight += a.weight;
-            acc.sum += a.sum;
+    // 可选：合并多个累加器
+    public void merge(WeightedAvgAccumulator acc, Iterable<WeightedAvgAccumulator> it) {
+        for (WeightedAvgAccumulator otherAcc : it) {
+            acc.count += otherAcc.count;
+            acc.sum += otherAcc.sum;
         }
     }
 
-    // 重置 ACC
-    public void resetAccumulator(WeightedAvgAccum acc) {
-        acc.weight = 0l;
-        acc.sum = 0l;
-    }
-
-    /**
-     * 累加器 Accumulator
-     * sum: 和
-     * weight: 权重
-     */
-    public static class WeightedAvgAccum {
-        public long sum = 0;
-        public long weight = 0;
+    // 可选：重置累加器（通常在批处理中使用）
+    public void resetAccumulator(WeightedAvgAccumulator acc) {
+        acc.count = 0;
+        acc.sum = 0L;
     }
 }
 ```
 
-从这个例子我们可以看到，自定义聚合函数时，我们需要继承 `org.apache.flink.table.functions.AggregateFunction` 类。注意，这个类与 [DataStream API 的窗口算子](../chapter-time-window/window.md#aggregate-function) 中所介绍的 `AggregateFunction` 命名空间不同，在引用时不要写错。不过这两个 `AggregateFunction` 的工作原理大同小异。首先，`AggregateFunction` 调用 `createAccumulator` 方法创建一个累加器，这里简称 ACC，ACC 用来存储中间结果。接着，每当表中有新数据到达，Flink SQL 会调用 `accumulate` 方法，新数据会作用在 ACC 上，ACC 被更新。当一个分组的所有数据都被 `accumulate` 处理，`getValue` 方法可以将 ACC 中的中间结果输出。
-
-综上，定义一个 `AggregateFunction` 时，这三个方法是必须实现的：
-
-* `createAccumulator`：创建 ACC，可以使用一个自定义的数据结构。
-* `accumulate`：处理新流入数据，更新 ACC；第一个参数是 ACC，第二个以及以后的参数为流入数据。
-* `getValue`：输出结果，返回值的数据类型 T 与 `AggregateFunction<T>` 中定义的泛型 T 保持一致。
-
-`createAccumulator` 创建一个 ACC。`accumulate` 第一个参数为 ACC，第二个及以后的参数为整个 `AggregateFunction` 的输入参数，这个方法的作用就是接受输入，并将输入作用到 ACC 上，更新 ACC。`getValue` 返回值的类型 `T` 为整个 `AggregateFunction<T>` 的输出类型。
-
-除了上面三个方法，下面三个方法需要根据使用情况来决定是否需要定义。例如，在流处理的会话窗口上进行聚合时，必须定义 `merge` 方法，因为当发现某行数据恰好可以将两个窗口连接为一个窗口时，`merge` 方法可以将两个窗口内的 ACC 合并。
-
-* `retract`：有界 `OVER WINDOW` 场景上，窗口是有界的，需要将早期的数据剔除。
-* `merge`：将多个 ACC 合并为一个 ACC，常用在流处理的会话窗口分组和批处理分组上。
-* `resetAccumulator`：重置 ACC，用于批处理分组上。
-
-这些方法必须声明为 `public`，且不能是 `static` 的，方法名必须与上述名字保持一致。
-
-在主逻辑中，我们注册这个函数，并在 SQL 语句中使用它：
+**3. 注册函数**
 
 ```java
-List<Tuple4<Integer, Long, Long, Timestamp>> list = new ArrayList<>();
-list.add(Tuple4.of(1, 100l, 1l, Timestamp.valueOf("2020-03-06 00:00:00")));
-list.add(Tuple4.of(1, 200l, 2l, Timestamp.valueOf("2020-03-06 00:00:01")));
-list.add(Tuple4.of(3, 300l, 3l, Timestamp.valueOf("2020-03-06 00:00:13")));
-
-DataStream<Tuple4<Integer, Long, Long, Timestamp>> stream = env
-            .fromCollection(list)
-            .assignTimestampsAndWatermarks(new AscendingTimestampExtractor<Tuple4<Integer, Long, Long, Timestamp>>() {
-                @Override
-                public long extractAscendingTimestamp(Tuple4<Integer, Long, Long, Timestamp> element) {
-                    return element.f3.getTime();
-                }
-            });
-
-Table table = tEnv.fromDataStream(stream, "id, v, w, ts.rowtime");
-
-tEnv.createTemporaryView("input_table", table);
-
-tEnv.registerFunction("WeightAvg", new WeightedAvg());
-
-Table agg = tEnv.sqlQuery("SELECT id, WeightAvg(v, w) FROM input_table GROUP BY id");
+tEnv.registerFunction("WeightedAvgFunc", new WeightedAvg());
 ```
+
+**4. 在 SQL 中调用函数**
+
+聚合函数通常与 `GROUP BY` 子句一起使用。
+
+```java
+// 假设 input_table 包含 id, value, weight 字段
+Table input_table = ...;
+tEnv.createTemporaryView("input_table", input_table);
+
+// 按 id 分组，计算每个 id 的加权平均值
+Table result = tEnv.sqlQuery(
+    "SELECT id, WeightedAvgFunc(value, weight) as wAvg " +
+    "FROM input_table GROUP BY id"
+);
+```
+
+## 表聚合函数（Table Aggregate Function）
+
+**表聚合函数（Table Aggregate Function, TableAggFunction）** 与普通聚合函数类似，也是将多行输入聚合成结果，但它的输出不是单个标量值，而是**零行、一行或多行**，每行可以包含一列或多列。可以将其看作是聚合函数和表函数的结合。
+
+**应用场景**：当你需要根据分组聚合的结果生成多行输出时，例如计算 Top N、根据聚合结果展开等。
+
+**定义与使用**
+
+定义表聚合函数需要继承 `org.apache.flink.table.functions.TableAggregateFunction<T, ACC>`，其中 `T` 是输出行的类型，`ACC` 是累加器类型。核心方法与普通聚合函数类似，但增加了一个 `emitValue(ACC accumulator, Collector<T> out)` 方法。
+
+*   `createAccumulator()`: 创建累加器。
+*   `accumulate(ACC accumulator, [input_values...])`: 累加逻辑。
+*   `emitValue(ACC accumulator, Collector<T> out)`: 在所有输入处理完毕后调用，用于**计算并输出最终结果**。你需要使用 `out.collect(T resultRow)` 来输出一行或多行结果。
+
+**示例：计算 Top 2**
+
+假设我们要找出每个分组中值（`value`）最大的前两个。
+
+**1. 定义累加器 `Top2Accumulator`**
+
+累加器需要存储当前遇到的最大和第二大的值。
+
+```java
+import java.util.Objects;
+
+/**
+ * 累加器，存储 Top 2 的值。
+ */
+public class Top2Accumulator {
+    public Integer first = null;
+    public Integer second = null;
+}
+```
+
+**2. 定义表聚合函数 `Top2`**
+
+```java
+import org.apache.flink.table.functions.TableAggregateFunction;
+import org.apache.flink.util.Collector;
+import org.apache.flink.types.Row;
+import org.apache.flink.table.annotation.DataTypeHint;
+import org.apache.flink.table.annotation.FunctionHint;
+
+// 指定输出类型为 ROW<value INT, rank INT>
+@FunctionHint(output = @DataTypeHint("ROW<value INT, rank INT>"))
+public class Top2 extends TableAggregateFunction<Row, Top2Accumulator> {
+
+    @Override
+    public Top2Accumulator createAccumulator() {
+        return new Top2Accumulator();
+    }
+
+    // 累加逻辑：更新 Top 2
+    public void accumulate(Top2Accumulator acc, Integer value) {
+        if (value != null) {
+            if (acc.first == null || value > acc.first) {
+                acc.second = acc.first;
+                acc.first = value;
+            } else if (acc.second == null || value > acc.second) {
+                acc.second = value;
+            }
+        }
+    }
+
+    // 可选：合并累加器（如果需要支持会话窗口等场景）
+    public void merge(Top2Accumulator acc, Iterable<Top2Accumulator> it) {
+        for (Top2Accumulator otherAcc : it) {
+            if (otherAcc.first != null) {
+                accumulate(acc, otherAcc.first);
+            }
+            if (otherAcc.second != null) {
+                accumulate(acc, otherAcc.second);
+            }
+        }
+    }
+
+    // 输出最终结果：输出 Top 1 和 Top 2（如果存在）
+    public void emitValue(Top2Accumulator acc, Collector<Row> out) {
+        if (acc.first != null) {
+            out.collect(Row.of(acc.first, 1)); // 输出 Top 1，rank 为 1
+        }
+        if (acc.second != null) {
+            out.collect(Row.of(acc.second, 2)); // 输出 Top 2，rank 为 2
+        }
+    }
+}
+```
+
+**3. 注册函数**
+
+```java
+tEnv.registerFunction("Top2Func", new Top2());
+```
+
+**4. 在 SQL 中调用函数**
+
+表聚合函数需要和 `GROUP BY` 一起使用，并通过 `FLATMAP` Table Function 的方式在 `SELECT` 子句中展开结果。
+
+```java
+// 假设 input_table 包含 category 和 value 字段
+Table input_table = ...;
+tEnv.createTemporaryView("input_table", input_table);
+
+// 按 category 分组，计算每个 category 的 Top 2 value
+Table result = tEnv.sqlQuery(
+    "SELECT category, value, rank " +
+    "FROM input_table " +
+    "GROUP BY category " +
+    "FLATMAP(Top2Func(value)) AS (value, rank)"
+);
+```
+
+这里 `FLATMAP(Top2Func(value))` 会对每个 `category` 分组调用 `Top2Func`，然后将其输出的多行（每个 Top 值一行）展开，并与分组键 `category` 组合成最终结果。
+
+通过这四种类型的用户自定义函数（标量函数、表函数、聚合函数、表聚合函数），你可以极大地增强 Flink Table API & SQL 的处理能力，实现各种复杂的业务逻辑。

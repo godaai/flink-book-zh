@@ -30,14 +30,14 @@ public class PartitionCustomExample {
         // 设置所有算子的并行度为4，表示所有算子的并行执行的算子子任务数为4
         senv.setParallelism(4);
 
-        DataStream<Tuple2<Integer, String>> dataStream = senv.fromElements(
+        DataStream<Tuple2<Integer, String>> dataStream = senv.fromData(
                 Tuple2.of(1, "123"), Tuple2.of(2, "abc"),
                 Tuple2.of(3, "256"), Tuple2.of(4, "zyx"),
                 Tuple2.of(5, "bcd"), Tuple2.of(6, "666"));
 
         // re-partition the second field
         // 对(Integer, String)中的第二个字段String使用 MyPartitioner 中的重分布逻辑
-        DataStream<Tuple2<Integer, String>> partitioned = dataStream.partitionCustom(new MyPartitioner(), 1);
+        DataStream<Tuple2<Integer, String>> partitioned = dataStream.partitionCustom(new MyPartitioner(),  tuple -> tuple.f1);
 
         partitioned.print();
 
@@ -52,8 +52,8 @@ public class PartitionCustomExample {
      * */
     public static class MyPartitioner implements Partitioner<String> {
 
-        private Random rand = new Random();
-        private Pattern pattern = Pattern.compile(".*\\d+.*");
+        private final Random rand = new Random();
+        private final Pattern pattern = Pattern.compile(".*\\d+.*");
 
         /**
          * key 泛型T 即根据哪个字段进行数据重分配，本例中是Tuple2(Integer, String)中的String

@@ -1,28 +1,38 @@
 package com.flink.tutorials.java.chapter5_time;
 
 import com.flink.tutorials.java.utils.stock.StockPrice;
-import com.flink.tutorials.java.utils.stock.StockSource;
+import com.flink.tutorials.java.utils.stock.StockReaderFormat;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.tuple.Tuple4;
-import org.apache.flink.streaming.api.TimeCharacteristic;
+import org.apache.flink.connector.file.src.FileSource;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction;
-import org.apache.flink.streaming.api.windowing.time.Time;
+import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
+
+import java.time.Duration;
 
 public class IncrementalProcessExample {
 
     public static void main(String[] args) throws Exception {
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setStreamTimeCharacteristic(TimeCharacteristic.ProcessingTime);
 
         // 读入股票数据流
-        DataStream<StockPrice> stockStream = env
-                .addSource(new StockSource("stock/stock-tick-20200108.csv"));
+        String filePath = ClassLoader.getSystemResource("stock/stock-tick-20200108.csv")
+                .getPath();
+        FileSource<StockPrice> source = FileSource
+                .forRecordStreamFormat(new StockReaderFormat(), new Path(filePath))
+                .build();
+        DataStream<StockPrice> stockStream = env.fromSource(
+                source, WatermarkStrategy
+                        .<StockPrice>forBoundedOutOfOrderness(Duration.ofSeconds(2))
+                        .withTimestampAssigner((event, timestamp) -> event.ts), "StockStream");
 
         // reduce的返回类型必须和输入类型相同
         // 为此我们将StockPrice拆成一个四元组 (股票代号，最大值、最小值，时间戳)
@@ -30,7 +40,7 @@ public class IncrementalProcessExample {
                 .map(s -> Tuple4.of(s.symbol, s.price, s.price, 0L))
                 .returns(Types.TUPLE(Types.STRING, Types.DOUBLE, Types.DOUBLE, Types.LONG))
                 .keyBy(s -> s.f0)
-                .timeWindow(Time.seconds(10))
+                .window(TumblingEventTimeWindows.of(Duration.ofSeconds(10)))
                 .reduce(new MaxMinReduce(), new WindowEndProcessFunction());
 
         maxMin.print();

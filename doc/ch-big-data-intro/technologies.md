@@ -105,3 +105,49 @@ name: fig-evolution-stream-frameworks
 - 可以扩展到上千台节点、在阿里巴巴等大公司的生产环境中进行过验证。
 - 易用且多样的 API，包括核心的 DataStream API 和 DataSet API 以及 Table API 和 SQL。
 - 可以连接大数据生态圈各类组件，包括 Kafka、Elasticsearch、JDBC、HDFS 和 Amazon S3。可以运行在 Kubernetes、YARN、Mesos 和独立（Standalone）集群上。
+
+2025年发布的Flink 2.0版本带来了全面的革新，主要改进包括：
+
+- 核心架构改进
+  - Disaggregated State Management：将状态管理与计算任务分离，采用ForSt（Flink Out-of-Task State）架构，实现更高效的资源利用，特别适合云原生环境。
+  - DataStream V2 API：全新的API设计，提供更直观的编程模型，支持更灵活的数据处理模式。
+  - Serialization Improvements：改进序列化机制，减少序列化开销，提高性能。
+
+- SQL和API增强
+  - Enhanced SQL Support：
+    - 支持更丰富的SQL语法，包括窗口操作、聚合函数等
+    - SQL Gateway支持Application Mode，提供更稳定的SQL服务
+    - 支持物化视图（Materialized Views）
+    - 改进的SQL执行优化器
+  - API统一：
+    - Stream-Batch Unification：统一的API处理有界和无界数据
+    - 支持Table API和DataStream API的无缝转换
+    - 改进的Java API支持
+
+- 性能优化
+  - Asynchronous Execution Model：异步执行模型，提高处理性能
+  - Adaptive Batch Execution：智能批处理执行优化
+  - Performance Evaluation：在Nexmark基准测试中表现优异
+  - Resource Optimization：更高效的资源利用
+
+- 数据集成
+  - Streaming Lakehouse：
+    - 深度集成Apache Paimon
+    - 支持实时数据湖操作
+    - 提供ACID事务支持
+  - Connector Improvements：
+    - 改进的Kafka连接器
+    - 更多数据源支持
+    - 改进的错误处理机制
+
+- 开发体验
+  - Application Mode：更稳定的部署模式
+  - Improved Monitoring：增强的监控能力
+  - Better Error Handling：改进的错误处理和调试支持
+  - Simplified Configuration：更简单的配置管理
+
+这些改进使得Flink 2.0在多个方面都有了显著提升：
+- 性能：通过异步执行模型和优化的序列化机制，提供更好的处理性能
+- 资源利用：通过Disaggregated State Management和Adaptive Batch Execution，实现更高效的资源使用
+- 开发体验：统一的API设计和改进的错误处理机制，降低开发难度
+- 生态系统：更强大的SQL支持和更好的数据集成能力

@@ -10,364 +10,292 @@
 
 :::
 
-通过前面的一些介绍，我们已经对 Flink SQL 有了一些了解。Flink SQL 底层使用 Dynamic Table 来进行流处理，它支持了时间窗口和 Join 操作。本节将围绕 SQL DDL，主要介绍创建、获取、修改和删除元数据时所涉及的一些注意事项。
+在前面的章节中，我们已经了解了如何使用 Flink SQL 查询数据（`SELECT` 语句），以及动态表和持续查询的概念。但是，在能够查询之前，我们需要先告诉 Flink **去哪里找数据**、**数据的结构是怎样的**，以及**如何读写这些数据**。这就是数据定义语言（Data Definition Language, DDL）的作用。
 
-## 注册和获取表
+Flink SQL 支持标准的 SQL DDL 语句，允许我们创建、修改、删除和管理各种元数据对象，如 Catalog、数据库（Database）、表（Table）、视图（View）和函数（Function）。本节将重点介绍如何使用 DDL 来管理这些元数据，特别是与表定义相关的核心概念。
 
-### Catalog 简介
+## Catalog：元数据的组织者
 
-Catalog 记录并管理了各类元数据信息，比如我们有哪些数据库（Database）、数据库是以文件还是消息队列的形式存储、某个数据库中有哪些表和视图、当前有哪些可用的函数等。Catalog 提供了一个注册、管理和访问这些元数据的 API。一般情况下，一个 Catalog 中包含一到多个 Database，一个 Database 包含一到多个 Table。
+在 Flink 中，**Catalog** 是组织和管理元数据的顶层结构。你可以把它想象成一个包含多个数据库（Database）的容器，而每个数据库又可以包含多个表（Table）、视图（View）和函数（Function）。Catalog 提供了一套 API，用于注册、查找和访问这些元数据信息。
 
-常见的 Catalog 包括：`GenericInMemoryCatalog`、`HiveCatalog` 和用户自定义的 Catalog。
+Catalog 的层级结构如下：
 
-`GenericInMemoryCatalog` 将元数据存储在内存中，只在一个 Session 会话内生效。默认情况下，都是使用这种 Catalog。
-
-Hive 的元数据管理功能是 SQL-on-Hadoop 领域事实上的标准，很多企业的生产环境使用 Hive 管理元数据，Hive 可以管理包括纯 Hive 表和非 Hive 表。为了与 Hive 生态兼容，Flink 推出了 `HiveCatalog`。对于同时部署了 Hive 和 Flink 的环境，`HiveCatalog` 允许用户在 Flink SQL 上读取原来 Hive 中的各个表。对于只部署了 Flink 的环境，`HiveCatalog` 是目前将元数据持久化的唯一方式。持久化意味着某些元数据管理团队可以先将 Kafka 或 HDFS 中的数据注册到 Catalog 中，其他数据分析团队无需再次注册表，只需每次从 Catalog 中获取表，不用关心数据管理相关问题。如果没有进行元数据持久化，用户每次都需要注册表。
-
-用户也可以自定义 Catalog，需要实现 `Catalog` 接口类。
-
-### 获取表
-
-我们编写好 SQL 查询语句（`SELECT ...` 语句）后，需要使用 `TableEnvironment.sqlQuery("SELECT ...")` 来执行这个 SQL 语句，这个方法返回的结果是一个 `Table`。`Table` 可以用于后续的 Table API & SQL 查询，也可以将 `Table` 转换为 `DataStream` 或者 `DataSet`。总之，Table API 和 SQL 可以完美融合。
-
-我们使用 `FROM table_name` 从某个表中查询数据，这个 `table_name` 表必须被注册到 `TableEnvironment` 中。注册有以下几种方式：
-
-* 使用 SQL DDL 中的 `CREATE TABLE ...` 创建表
-* `TableEnvironment.connect()` 连接一个外部系统
-* 从 Catalog 中获取已注册的表
-
-第一种 SQL DDL 的方式，我们会用 `CREATE TABLE table_name ...` 来明确指定一个表的名字为 `table_name`。而第二种和第三种方式，我们是在 Java/Scala 代码中获取一个 `Table` 对象，获取对象后，明确使用 `createTemporaryView()` 方法声明一个 `Table` 并指定一个名字。例如，下面的代码中，我们获取了一个 `Table`，并通过 `createTemporaryView()` 注册该 `Table` 名字为 `user_behavior`。
-
-```java
-Table userBehaviorTable = tEnv.fromDataStream(userBehaviorStream, "user_id, item_id, behavior, ts.rowtime");
-
-// createTemporaryView 创建名为 user_behavior 的表
-tEnv.createTemporaryView("user_behavior", userBehaviorTable);
+```
+Catalog
+└── Database
+    ├── Table
+    ├── View
+    └── Function
 ```
 
-对于 `TableEnvironment.connect()` 所连接的外部系统，也可以使用 `createTemporaryTable` 方法，以链式调用的方式注册名字：
+Flink 内置了几种 Catalog 实现，最常用的是：
+
+*   **`GenericInMemoryCatalog`**: 这是 Flink **默认**使用的 Catalog。顾名思义，它将所有的元数据信息（数据库、表、函数等）存储在**内存**中。这意味着一旦 Flink 的会话（Session）结束，所有通过这个 Catalog 注册的元数据都会**丢失**。它非常适合快速原型开发和测试，或者那些不需要跨会话共享元数据的场景。默认情况下，`GenericInMemoryCatalog` 包含一个名为 `default_database` 的默认数据库。
+
+*   **`HiveCatalog`**: 为了与 Hadoop 生态系统（特别是 Hive Metastore）无缝集成，Flink 提供了 `HiveCatalog`。它使用 Hive Metastore 来**持久化**存储元数据。这意味着即使 Flink 会话结束，注册在 `HiveCatalog` 中的数据库、表和函数信息依然存在，可以在后续的会话中直接使用。
+    *   对于已经部署了 Hive 的环境，`HiveCatalog` 允许 Flink 直接访问和查询 Hive 中已有的表。
+    *   对于只部署了 Flink 的环境，`HiveCatalog` 是目前**官方推荐的持久化元数据的标准方式**。通过它，数据管理团队可以预先定义好数据源表（如 Kafka 主题、HDFS 目录），数据分析团队则可以直接使用这些表，无需每次都重复定义连接信息和表结构。
+
+*   **用户自定义 Catalog**: Flink 也允许用户通过实现 `Catalog` 接口来创建自定义的 Catalog，以对接其他元数据管理系统。
+
+### 注册和使用 Catalog
+
+你可以在 `TableEnvironment` 中注册和切换 Catalog。
 
 ```java
-tEnv
-  // 使用 connect 函数连接外部系统
-  .connect(...)
-  // 序列化方式 可以是 JSON、Avro 等
-  .withFormat(...)
-  // 数据的 Schema
-  .withSchema(...)
-  // 临时表的表名，后续可以在 SQL 语句中使用这个表名
-  .createTemporaryTable("user_behavior");
+import org.apache.flink.table.api.*;
+import org.apache.flink.table.catalog.hive.HiveCatalog;
+
+StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+StreamTableEnvironment tEnv = StreamTableEnvironment.create(env);
+
+// 1. 使用默认的 GenericInMemoryCatalog
+// Flink 默认创建了一个名为 default_catalog 的 GenericInMemoryCatalog
+tEnv.useCatalog("default_catalog");
+tEnv.useDatabase("default_database");
+
+// 2. 注册并使用 HiveCatalog (需要添加 flink-connector-hive 依赖)
+String catalogName    = "myhive";        // Catalog 名称
+String defaultDatabase = "my_db";        // Hive中的默认数据库
+String hiveConfDir  = "/path/to/hive/conf"; // Hive 配置文件目录 (包含 hive-site.xml)
+// String hiveVersion = "3.1.2"; // 如果需要，指定 Hive 版本
+
+HiveCatalog hiveCatalog = new HiveCatalog(catalogName, defaultDatabase, hiveConfDir);
+tEnv.registerCatalog(catalogName, hiveCatalog);
+
+// 切换到 Hive Catalog
+tEnv.useCatalog(catalogName);
+// 切换到 Hive Catalog 中的某个数据库 (如果 defaultDatabase 不存在，可能需要先创建)
+// tEnv.executeSql("CREATE DATABASE IF NOT EXISTS some_other_db");
+// tEnv.useDatabase("some_other_db");
 ```
 
-注册好表名后，就可以在 SQL 语句中使用 `FROM user_behavior` 来查询该表。
+## 管理 Catalog 和 Database (`SHOW`, `USE`)
 
-即使没有明确指定表名，也没有问题。`Table.toString()` 可以返回表的名字，如果没有给这个 `Table` 指定名字，Flink 会为其自动分配一个唯一的表名，不会与其他表名冲突。如下所示：
-
-```java
-// 获取一个 Table，并没有明确为其分配表名
-Table table = ...;
-String tableName = table.toString();
-tEnv.sqlQuery("SELECT * FROM " + tableName);
-```
-
-甚至可以省略 `toString` 方法，直接将 `Table` 对象与 SQL 语句用加号 `+` 连接，因为 `+` 会自动调用 `Table.toString()` 方法。
-
-```java
-// 获取一个 Table，并没有明确为其分配表名
-Table table = ...;
-// 加号 + 操作符会在编译期间自动调用 Table.toString() 方法
-tEnv.sqlQuery("SELECT * FROM " + table);
-```
-
-### HiveCatalog
-
-如果想将元数据持久化到 `HiveCatalog` 中：
-
-```java
-TableEnvironment tEnv = ...
-
-// 创建一个 HiveCatalog
-// 四个参数分别为：catalogName、databaseName、hiveConfDir、hiveVersion
-Catalog catalog = new HiveCatalog("mycatalog", null, "<path_of_hive_conf>", "<hive_version>");
-
-// 注册 catalog，取名为 mycatalog
-tEnv.registerCatalog("mycatalog", catalog);
-
-// 创建一个 Database，取名为 mydb
-tEnv.sqlUpdate("CREATE DATABASE mydb WITH (...)");
-
-// 创建一个 Table，取名为 mytable
-tEnv.sqlUpdate("CREATE TABLE mytable (name STRING, age INT) WITH (...)");
-
-// 返回所有 Table
-tEnv.listTables(); 
-```
-
-## USE 和 SHOW 语句
-
-创建完 Catalog、Database 后，可以像其他 SQL 引擎一样，使用 `SHOW` 和 `USE` 语句：
+一旦注册了 Catalog，就可以使用标准的 SQL 语句来查看和切换当前的 Catalog 和 Database。
 
 ```sql
--- 展示所有 Catalog
+-- 显示当前可用的所有 Catalog
 SHOW CATALOGS;
+--> default_catalog
+--> myhive
 
--- 使用 mycatalog
-USE CATALOG mycatalog;
+-- 显示当前的 Catalog
+SHOW CURRENT CATALOG;
+--> default_catalog
 
--- 展示当前 Catalog 里所有 Database
+-- 切换到 myhive Catalog
+USE CATALOG myhive;
+
+-- 显示当前 Catalog 下的所有数据库
 SHOW DATABASES;
+--> default
+--> my_db
 
--- 使用 mydatabase
-USE mydb;
+-- 显示当前的 Database
+SHOW CURRENT DATABASE;
+--> my_db
 
--- 展示当前 Catalog 里当前 Database 里所有 Table
+-- 切换到 my_db 数据库
+USE my_db;
+
+-- 显示当前 Catalog 和 Database 下的所有表
 SHOW TABLES;
+--> table1
+--> table2
 ```
 
-这些语句需要粘贴到 `sqlUpdate` 方法中：
+这些 `SHOW` 和 `USE` 语句可以通过 `TableEnvironment` 的 `executeSql()` 方法执行，或者在 SQL 客户端（SQL Client）中使用。
 
 ```java
-Catalog catalog = ...
+// 切换 Catalog 和 Database
+tEnv.executeSql("USE CATALOG myhive");
+tEnv.executeSql("USE my_db");
 
-tEnv.registerCatalog("mycatalog", catalog);
-tEnv.sqlUpdate("USE catalog mycatalog");
-tEnv.sqlUpdate("CREATE DATABASE mydb");
-tEnv.sqlUpdate("USE mydb");
+// 显示表
+TableResult result = tEnv.executeSql("SHOW TABLES");
+result.print(); // 打印结果
 ```
 
-## CREATE、DROP、ALTER
+## 管理数据库、表和函数 (`CREATE`, `DROP`, `ALTER`)
 
-`CREATE`、`ALTER`、`DROP` 是 SQL 中最常见的三种 DDL 语句，可以创建、修改和删除数据库（Database）、表（Table）和函数（Function）。
+Flink SQL 支持标准的 `CREATE`, `DROP`, `ALTER` 语句来管理数据库、表和函数。
 
-`CREATE` 语句可以创建一个 Database、Table 和 Function：
+### 管理数据库
 
-* `CREATE TABLE`
-* `CREATE DATABASE`
-* `CREATE FNCTION`
-
-`ALTER` 语句可以修改已有的 Database、Table 和 Function：
-
-* `ALTER TABLE`
-* `ALTER DATABASE`
-* `ALTER FNCTION`
-
-`DROP` 语句可以删除之前创建的 Database、Table 和 Function：
-
-* `DROP TABLE`
-* `DROP DATABASE`
-* `DROP FUNCTION`
-
-这些语句可以放到 `TableEnvironment.sqlUpdate()` 的参数里，也可以在 SQL Client 里执行。`TableEnvironment.sqlUpdate()` 执行成功后没有返回结果，执行失败则会抛出异常。下面例子展示了如何在 `TableEnvironment` 中使用 `sqlUpdate`：
+*   `CREATE DATABASE [IF NOT EXISTS] [catalog_name.]db_name [COMMENT database_comment] [WITH (key1=val1, ...)]`
+    *   创建一个新的数据库。`IF NOT EXISTS` 避免了数据库已存在时的错误。
+    *   `WITH` 子句可以设置数据库级别的属性。
+*   `DROP DATABASE [IF EXISTS] [catalog_name.]db_name [RESTRICT | CASCADE]`
+    *   删除一个数据库。`IF EXISTS` 避免了数据库不存在时的错误。
+    *   `RESTRICT`（默认）：如果数据库不为空（包含表、视图或函数），则删除失败。
+    *   `CASCADE`：强制删除数据库及其包含的所有对象。
+*   `ALTER DATABASE [catalog_name.]db_name SET (key1=val1, ...)`
+    *   修改数据库的属性。
 
 ```java
-// tEnv：TableEnvironment
-// CREATE TABLE
-tEnv.sqlUpdate("CREATE TABLE user_behavior (" +
-                "    user_id BIGINT," +
-                "    item_id BIGINT," +
-                "    category_id BIGINT," +
-                "    behavior STRING," +
-                "    ts TIMESTAMP(3)," +
-                "    WATERMARK FOR ts as ts - INTERVAL '5' SECOND  -- 在ts上定义watermark，ts成为事件时间列" +
-                ") ...");
-
-// ALTER DATABASE
-tEnv.sqlUpdate("ALTER DATABASE db1 set ('k1' = 'a', 'k2' = 'b')")
-
-// DROP TABLE
-tEnv.sqlUpdate("DROP TABLE user_behavior");
+tEnv.executeSql("CREATE DATABASE IF NOT EXISTS my_new_db WITH ('prop1' = 'value1')");
+tEnv.executeSql("ALTER DATABASE my_new_db SET ('prop1' = 'new_value', 'prop2' = 'value2')");
+tEnv.executeSql("DROP DATABASE IF EXISTS my_old_db CASCADE");
 ```
 
-### CREATE/ALTER/DROP TABLE
+### 管理函数
 
-#### CREATE TABLE
+*   `CREATE [TEMPORARY|TEMPORARY SYSTEM] FUNCTION [IF NOT EXISTS] [catalog_name.][db_name.]function_name AS class_name [LANGUAGE JAVA|SCALA]`
+    *   注册一个用户自定义函数（UDF）。`TEMPORARY` 表示函数只在当前会话有效（注册在内存 Catalog 中），`TEMPORARY SYSTEM` 表示在所有内存 Catalog 的数据库中都可用。省略 `TEMPORARY` 则表示在当前 Catalog 和 Database 中持久化注册（如果 Catalog 支持持久化）。
+*   `DROP [TEMPORARY|TEMPORARY SYSTEM] FUNCTION [IF EXISTS] [catalog_name.][db_name.]function_name`
+    *   删除一个 UDF。
+*   `ALTER FUNCTION [catalog_name.][db_name.]function_name AS class_name [LANGUAGE JAVA|SCALA]`
+    *   修改一个已注册的 UDF（通常是更新其实现类）。
 
-`CREATE TABLE` 需要按照下面的模板编写：
+我们将在后续章节详细讨论用户自定义函数。
+
+### 管理表 (`CREATE TABLE` 详解)
+
+`CREATE TABLE` 是最常用的 DDL 语句之一，用于定义表的结构、连接器信息、格式化方式以及其他属性。
 
 ```sql
-CREATE TABLE [catalog_name.][db_name.]table_name
+CREATE TABLE [IF NOT EXISTS] [catalog_name.][db_name.]table_name
   (
-    {<column_definition> | <computed_column_definition>}[, ...n]
-    [<watermark_definition>]
+    -- 列定义
+    { <column_definition> | <computed_column_definition> }[ , ...n ]
+    -- 可选：主键约束
+    [ , PRIMARY KEY (column_name, ...) NOT ENFORCED ]
+    -- 可选：Watermark 定义
+    [ , <watermark_definition> ]
   )
-  [COMMENT table_comment]
-  [PARTITIONED BY (partition_column_name1, partition_column_name2, ...)]
-  WITH (key1=val1, key2=val2, ...)
-```
-
-一个名为 `table_name` 的 `Table` 隶属于一个名为 `db_name` 的 Database，`db_name` 又隶属于名为 `catalog_name` 的 Catalog。如果不明确指定 `db_name` 和 `catalog_name`，该表被注册到默认的 Catalog 和默认的 Database 中。如果 `table_name` 与已有的表名重复，会抛出异常。
-
-`<column_definition>`、`<computed_column_definition>` 和 `<watermark_definition>` 需要符合下面的模板：
-
-```sql
-<column_definition>:
-  column_name column_type [COMMENT column_comment]
-
-<computed_column_definition>:
-  column_name AS computed_column_expression [COMMENT column_comment]
-
-<watermark_definition>:
-  WATERMARK FOR rowtime_column_name AS watermark_strategy_expression
-```
-
-`COMMENT` 用来对字段做注释，使用 `DESCRIBE table_name` 命令时，可以查看到字段的一些注释和描述信息。
-
-`<column_definition>` 在传统的 SQL DDL 中经常见到，Watermark 策略在 [窗口](sql-window) 部分已经介绍，不再赘述，这里主要介绍计算列（Computed Column）。
-
-#### 计算列
-
-计算列是虚拟字段，不是一个实际存储在表中的字段。计算列可以通过表达式、内置函数、或是自定义函数等方式，使用其它列的数据，计算出其该列的数值。比如，一个订单表中有单价 `price` 和数量 `quantity`，总价可以被定义为 `total AS price * quantity`。计算列表达式可以是已有的物理列、常量、函数的组合，但不能是 `SELECT ...` 式的子查询。计算列虽然是个虚拟字段，但在 Flink SQL 中可以像普通字段一样被使用。
-
-计算列常常被用于定义时间属性，在 [窗口](sql-window) 部分我们曾介绍了如何定义 Processing Time：使用 `proc AS PROCTIME()` 来定义一个名为 `proc` 的计算列，该列可以在后续计算中被用做时间属性。`PROCTIME()` 是 Flink 提供的内置函数，用来生成 Processing Time。
-
-```sql
-CREATE TABLE mytable (
-    id BIGINT,
-    -- 在原有 Schema 基础上添加一列 proc
-    proc as PROCTIME()
-) WITH (
+  [ COMMENT table_comment ]
+  [ PARTITIONED BY (partition_column_name1, partition_column_name2, ...) ] -- 可选：分区
+  WITH (
+    'connector' = 'connector_identifier', -- 指定连接器类型
+    -- 连接器和格式化所需的其他选项
+    key1 = val1,
+    key2 = val2,
     ...
+  )
+```
+
+让我们分解这个语法：
+
+1.  **`[IF NOT EXISTS] [catalog_name.][db_name.]table_name`**: 指定表的完整名称。`IF NOT EXISTS` 可以避免表已存在时出错。如果省略 Catalog 和 Database 名称，则使用当前 `USE` 语句指定的 Catalog 和 Database。
+
+2.  **列定义 (`<column_definition>`)**: 定义表的普通列。
+    ```sql
+    column_name <column_type> [COMMENT column_comment]
+    ```
+    *   `column_name`: 列名。
+    *   `<column_type>`: 列的数据类型，例如 `INT`, `BIGINT`, `STRING`, `DOUBLE`, `TIMESTAMP(3)`, `ROW<f1 INT, f2 STRING>`, `ARRAY<STRING>`, `MAP<STRING, INT>` 等。Flink 支持标准 SQL 类型以及嵌套、复杂类型。
+    *   `COMMENT`: 可选的列注释。
+
+3.  **计算列 (`<computed_column_definition>`)**: 定义基于其他列计算得出的虚拟列。计算列不实际存储数据，而是在查询时动态计算。
+    ```sql
+    column_name AS <expression> [COMMENT column_comment]
+    ```
+    *   `expression`: 一个 SQL 表达式，可以引用同一张表中的其他列。计算列常用于简化查询或预处理数据。
+    *   **定义处理时间**: 一个常见的用途是定义**处理时间（Processing Time）**属性：
+        ```sql
+        proc_time AS PROCTIME()
+        ```
+        这里 `PROCTIME()` 是 Flink 内置函数，`proc_time` 列就代表了记录被处理时机器的系统时间。
+
+4.  **主键约束 (`PRIMARY KEY ... NOT ENFORCED`)**: 可选地定义表的主键。Flink 使用主键信息进行优化（例如，用于 Upsert 模式的 Sink），但**并不强制执行**主键的唯一性约束 (`NOT ENFORCED` 是必需的)。
+
+5.  **Watermark 定义 (`<watermark_definition>`)**: 定义**事件时间（Event Time）**属性和 Watermark 生成策略，这对于处理乱序事件至关重要。
+    ```sql
+    WATERMARK FOR <event_time_column> AS <watermark_strategy_expression>
+    ```
+    *   `<event_time_column>`: 指定哪个 `TIMESTAMP` 或 `TIMESTAMP_LTZ` 类型的列作为事件时间的来源。
+    *   `<watermark_strategy_expression>`: 定义 Watermark 的生成逻辑。常见的策略有：
+        *   **有界乱序 (Bounded Out-of-Orderness)**: `ts - INTERVAL '5' SECOND`。表示 Watermark 总是比观察到的最大事件时间晚 5 秒。
+        *   **严格递增 (Strictly Ascending)**: `ts`。假设事件时间戳是严格递增的（没有乱序）。
+        *   **单调递增 (Monotonously Increasing)**: `ts - INTERVAL '1' MILLISECOND`。允许时间戳相等，但不允许乱序。
+    一旦定义了 Watermark，`<event_time_column>` 就成为了表的**事件时间属性 (rowtime)**。
+
+6.  **`COMMENT table_comment`**: 可选的表注释。
+
+7.  **`PARTITIONED BY (...)`**: 可选地定义表的分区。分区是一种将表数据在物理存储上划分为更小子集的方式，通常基于一个或多个列的值（例如日期、区域）。这对于优化查询性能和管理数据生命周期非常有用。分区列**不能**是计算列或定义 Watermark 的列。分区列的值通常是从文件路径或 Kafka 主题等外部系统中推断出来的，或者在 `INSERT` 语句中指定。
+
+8.  **`WITH (...)`**: 这是 **`CREATE TABLE` 语句的核心部分**，用于配置如何连接到外部系统以及如何解析数据。
+    *   **`'connector' = 'connector_identifier'` (必需)**: 指定要使用的连接器。Flink 提供了丰富的内置连接器，例如：
+        *   `'filesystem'`: 连接到文件系统（本地、HDFS、S3 等）。
+        *   `'kafka'`: 连接到 Apache Kafka。
+        *   `'jdbc'`: 连接到关系型数据库。
+        *   `'print'`: 用于调试，将数据打印到标准输出/错误。
+        *   `'blackhole'`: 用于性能测试，丢弃所有数据。
+        *   还有更多针对特定系统的连接器（如 Elasticsearch, HBase, Pulsar 等）。
+    *   **其他选项**: 除了 `'connector'`，还需要提供该连接器和所需数据格式所需的其他配置参数。例如：
+        *   对于 `'filesystem'` 连接器，可能需要 `'path'`, `'format'`。
+        *   对于 `'kafka'` 连接器，需要 `'topic'`, `'properties.bootstrap.servers'`, `'properties.group.id'`, `'scan.startup.mode'`, `'format'` 等。
+        *   通用的格式化选项 `'format'`，指定数据的序列化/反序列化方式，如 `'csv'`, `'json'`, `'avro'`, `'parquet'` 等。每种格式也可能有其特定的配置项。
+    *   **具体选项请参考 Flink 官方文档中对应连接器和格式的部分。**
+
+**示例：创建一个连接到 Kafka 的表**
+
+```sql
+CREATE TABLE user_behavior (
+    user_id BIGINT,
+    item_id BIGINT,
+    category_id BIGINT,
+    behavior STRING,
+    ts TIMESTAMP(3), -- 事件时间戳
+    -- 定义 Watermark，允许 5 秒乱序
+    WATERMARK FOR ts AS ts - INTERVAL '5' SECOND
+) WITH (
+    'connector' = 'kafka',
+    'topic' = 'user_behavior_topic',
+    'properties.bootstrap.servers' = 'kafka-broker1:9092,kafka-broker2:9092',
+    'properties.group.id' = 'flink_consumer_group',
+    'scan.startup.mode' = 'earliest-offset', -- 从最早的 offset 开始消费
+    'format' = 'json', -- 数据格式为 JSON
+    'json.fail-on-missing-field' = 'false', -- 忽略 JSON 中缺失的字段
+    'json.ignore-parse-errors' = 'true' -- 忽略解析错误
 );
 ```
 
-关于计算列，相关知识点可以总结为：
-
-* 计算列是一个虚拟列，计算的过程可以由函数、已有物理列、常量等组成，可以用在 `SELECT` 语句中。
-* 计算列不能作为 `INSERT` 语句的输出目的地，或者说我们不能使用 `INSERT` 语句将数据插入到目标表的计算列上。
-
-#### WITH
-
-在 [Table API & SQL 简介](table-overview.md) 中我们曾介绍连接外部系统时必须配置相应参数，这些参数以 `key=value` 等形式被放在 `WITH` 语句中。
-
-```sql
-CREATE TABLE my_table (
-  -- Schema
-  ...
-) WITH (
-  -- 声明参数
-  'connector.type' = 'kafka',
-  'connector.version' = 'universal',
-  ...
-)
-```
-
-在这个例子中使用的外部系统是 Kafka，我们需要配置一些 Kafka 连接相关的参数。Flink 的官方文档中有不同 Connector 的详细参数配置示例，这里不再详细介绍每种 Connector 需要配置哪些参数，
-
-使用 `CREATE TABLE` 创建的表可以作为 Source 也可以作为 Sink。
-
-#### PARTITIONED BY
-
-根据某个字段进行分区。如果这个表中的数据实际存储在一个文件系统上，Flink 会为每个分区创建一个文件夹。例如，以日期为分区，那么每天的数据被放在一个文件夹中。`PARTITIONED BY` 经常被用在批处理中。
-
-:::note
-这里是 `PARTITIONED BY`，与 `OVER WINDOW` 中的 `PARTITON BY` 语法和含义均不同。
-:::
-
 #### ALTER TABLE
 
-`ALTER TABLE` 目前支持修改表名和一些参数。
+`ALTER TABLE` 用于修改现有表的定义，例如重命名表、更改表属性等。
 
 ```sql
--- 修改表名
-ALTER TABLE [catalog_name.][db_name.]table_name RENAME TO new_table_name
+-- 重命名表
+ALTER TABLE [catalog_name.][db_name.]table_name RENAME TO new_table_name;
 
--- 修改参数，如果某个 Key 之前被 WITH 语句设置过，再次设置会将老数据覆盖
-ALTER TABLE [catalog_name.][db_name.]table_name SET (key1=val1, key2=val2, ...)
+-- 修改表属性 (WITH 子句中的选项)
+ALTER TABLE [catalog_name.][db_name.]table_name SET (key1=val1, key2=val2, ...);
 ```
+
+*注意：Flink 对 `ALTER TABLE` 的支持有限，例如，目前还不能直接修改列定义、添加/删除列或更改 Watermark 策略。通常需要 `DROP` 然后 `CREATE` 来实现更复杂的结构变更。*
 
 #### DROP TABLE
 
-`DROP TABLE` 用来删除一个表。`IF EXISTS` 表示只对已经存在的表进行删除。
+`DROP TABLE` 用于删除一个已定义的表。
 
 ```sql
-DROP TABLE [IF EXISTS] [catalog_name.][db_name.]table_name
+DROP TABLE [IF EXISTS] [catalog_name.][db_name.]table_name;
 ```
+*   `IF EXISTS` 避免了表不存在时出错。
 
-### CREATE/ALTER/DROP DATABASE
+## 数据操作 (DML): INSERT INTO / INSERT OVERWRITE
 
-#### CREATE DATABASE
-
-`CREATE DATABASE` 一般使用下面的模板：
+虽然本节主要关注 DDL，但与表定义密切相关的是如何向表中写入数据。Flink SQL 使用 `INSERT INTO` 和 `INSERT OVERWRITE` 语句将查询结果写入到目标表中。
 
 ```sql
-CREATE DATABASE [IF NOT EXISTS] [catalog_name.]db_name
-  [COMMENT database_comment]
-  WITH (key1=val1, key2=val2, ...)
+-- 将查询结果追加到目标表 my_sink_table
+INSERT INTO my_sink_table
+SELECT ... FROM my_source_table ... ;
+
+-- 对于分区表，覆盖指定分区的数据
+INSERT OVERWRITE my_partitioned_sink_table PARTITION (dt='2023-10-27', hr='14')
+SELECT ... FROM my_source_table WHERE ... ;
+
+-- 对于非分区表或覆盖所有分区 (如果 Sink 支持)
+INSERT OVERWRITE my_sink_table
+SELECT ... FROM my_source_table ... ;
 ```
 
-这里的语法与其他 SQL 引擎比较相似。其中 `IF NOT EXISTS` 表示，如果这个 Database 不存在才创建，否则不会创建。
+*   `INSERT INTO`: 将查询结果**追加**到目标表中。适用于 Append-only 的 Sink 或支持追加的 Sink。
+*   `INSERT OVERWRITE`: **覆盖**目标表或其特定分区的数据。这通常只适用于批处理模式或特定的支持覆盖写操作的 Sink（如文件系统）。对于流处理模式，`INSERT OVERWRITE` 的行为可能受限或不被支持。
 
-#### ALTER DATABASE
+这些 `INSERT` 语句也通过 `TableEnvironment.executeSql()` 执行。
 
-```sql
-ALTER DATABASE [catalog_name.]db_name SET (key1=val1, key2=val2, ...)
-```
-
-`ALTER DATABASE` 支持修改参数，新数据会覆盖老数据。
-
-#### DROP DATABASE
-
-```sql
-DROP DATABASE [IF EXISTS] [catalog_name.]db_name [(RESTRICT | CASCADE) ]
-```
-
-`RESTRICT` 选项表示如果 Database 非空，那么会抛出异常，默认开启本选项；`CASCADE` 选项表示会将 Database 下所属的 Table 和 Function 等都删除。
-
-### CREATE/ALTER/DROP FUNCTION
-
-除了传统 SQL 引擎都会提供的上述 `CREATE` 功能，Table API & SQL 还提供了函数（Function）功能。我们也可以用 Java 或 Scala 语言自定义一个函数，然后注册进来，在 SQL 语句中使用。`CREATE FUNCTION` 的模板如下所示，我们将在 [用户自定义函数](catalog-function.md) 部分的详细介绍如何使用 Java/Scala 自定义函数。
-
-```sql
-CREATE [TEMPORARY|TEMPORARY SYSTEM] FUNCTION 
-  [IF NOT EXISTS] [catalog_name.][db_name.]function_name 
-  AS identifier [LANGUAGE JAVA|SCALA]
-```
-
-## INSERT
-
-`INSERT` 语句可以向表中插入数据，一般用于向外部系统输出数据。它的语法模板如下：
-
-```sql
-INSERT {INTO | OVERWRITE} [catalog_name.][db_name.]table_name [PARTITION part_spec] 
-SELECT ...
-
-part_spec:
-  (part_col_name1=val1 [, part_col_name2=val2, ...])
-```
-
-上面的 SQL 语句将 `SELECT` 查询结果写入到目标表中。`OVERWRITE` 选项表示将原来的数据覆盖，否则新数据只是追加进去。`PARTITION` 表示数据将写入哪个分区。如果 `CREATE TABLE` 是按照日期进行 `PARTITIONED BY` 分区，那么每个日期会有一个文件夹，`PARTITION` 后要填入一个日期，数据将写入日期对应目录中。分区一般常用于批处理场景。
-
-```sql
--- 创建一个表，用来做输出
-CREATE TABLE behavior_cnt (
-  user_id BIGINT,
-  cnt BIGINT
-) WITH (
-  'connector.type' = 'filesystem',  -- 使用 filesystem connector
-  'connector.path' = 'file:///tmp/behavior_cnt',  -- 输出地址为一个本地路径
-  'format.type' = 'csv'  -- 数据源格式为 json
-)
-
--- 向一个 Append-only 表中输出数据
-INSERT INTO behavior_cnt 
-SELECT 
-	user_id, 
-	COUNT(behavior) AS cnt 
-FROM user_behavior 
-GROUP BY user_id, TUMBLE(ts, INTERVAL '10' SECOND)
-```
-
-或者是将特定的值写入目标表：
-
-```sql
-INSERT {INTO | OVERWRITE} [catalog_name.][db_name.]table_name VALUES values_row [, values_row ...]
-```
-
-例如：
-
-```sql
-CREATE TABLE students (name STRING, age INT, score DECIMAL(3, 2)) WITH (...);
-
-INSERT INTO students
-  VALUES ('Li Lei', 35, 1.28), ('Han Meimei', 32, 2.32);
-```
+通过熟练掌握 Flink SQL DDL，我们可以灵活地定义数据源、数据汇以及数据处理过程中的中间表，为构建复杂的数据管道打下坚实的基础。

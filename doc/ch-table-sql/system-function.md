@@ -11,22 +11,15 @@
 :::
 
 
-## 函数简介
+## 系统内置函数概述
 
-Table API & SQL 提供给用户强大的操作数据的方法：函数（Function）。对于 Function，可以有两种维度来对其分类。
+函数（Function）是 Flink Table API & SQL 中用于封装复杂逻辑、扩展数据处理能力的核心机制。它们允许用户在查询中执行各种计算和转换操作。Flink 中的函数可以从两个主要维度进行分类，这有助于理解它们的特性和使用范围。
 
-第一种维度根据是否为系统内置（System）来分类。System Function 是 Flink 提供的内置函数，在任何地方都可以直接拿来使用。非系统内置函数一般注册到一个 Catalog 下的 Database 里，该函数有自己的命名空间（Namespace），表示该函数归属于哪个 Catalog 和 Database。例如，使用名为 `func` 的函数时需要加上 Namespace 前缀：`mycatalog.mydb.func`。由于函数被注册到 Catalog 中，这种函数被称为表目录函数（Catalog Function）。
+第一个维度是根据函数的来源和注册方式，将其区分为**系统内置函数（System Functions）**和**目录函数（Catalog Functions）**。系统内置函数由 Flink 框架直接提供，无需额外注册即可在任何 SQL 查询或 Table API 调用中使用。这些函数覆盖了广泛的常见操作，例如数学计算、字符串处理、日期时间操作以及聚合等。正如在 `SystemFunctionExample.java` 示例中所见，像 `ARRAY[...]` 这样的构造函数用于创建数组，以及 `CARDINALITY(...)` 用于计算数组元素个数的函数，都属于系统内置函数的范畴，可以直接在 SQL 语句中使用。相对地，目录函数则是用户自定义或第三方提供的函数，它们被注册到特定的 Catalog 和 Database 下，调用时通常需要通过完整的命名空间路径（如 `mycatalog.mydb.myfunc`）来引用。
 
-第二种维度根据是否为临时函数来分类。临时函数（Temporary Function）只存在于一个 Flink Session 中，Session 结束后就被销毁，其他 Session 无法使用。非临时函数，又被成为持久化函数（Persistent Function），可以存在于多个 Flink Session 中，它可以是一个 System Function，也可以是一个 Catalog Function。
+第二个维度是根据函数的生命周期，将其区分为**临时函数（Temporary Functions）**和**持久化函数（Persistent Functions）**。临时函数仅在当前的 Flink 会话（Session）内有效，一旦会话结束，函数定义便会丢失。而持久化函数则具有更长的生命周期，可以在多个会话之间共享。系统内置函数本质上都是持久化的。目录函数可以是临时的，也可以是持久化的，这取决于其注册方式。
 
-根据这两个维度，Function 可以被划分四类：
-
-* Temporary System Function
-* System Function
-* Temporary Catalog Function
-* Catalog Function
-
-这些函数可以在 Table API 中使用 Java、Scala 或 Python 语言调用，也可以在 Flink SQL 中以 SQL 语句的形式调用。这里以 SQL 为例来介绍如何使用这些函数。绝大多数 System Function 已经内置在 Table API & SQL 中，它们也是 Persistent Function，本节将主要介绍这部分内容，下节将介绍 Catalog Function。由于 System Function 较多，这里只介绍一些常用的函数并提供一些例子，其他函数的具体使用方法可以参考 Flink 的官方文档。
+综合这两个维度，函数可以被归入四种类别：临时系统函数（较少见）、系统函数、临时目录函数和（持久化）目录函数。本章将重点介绍最为常用且基础的**系统内置函数**，它们构成了 Flink SQL 功能的核心。后续章节将探讨如何创建和使用目录函数。系统内置函数种类繁多，本章将选取其中具有代表性的类别和函数进行讲解，并辅以示例。关于所有系统函数的完整列表和详细用法，建议查阅 Flink 官方文档。
 
 ## 标量函数
 

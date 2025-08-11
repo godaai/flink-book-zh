@@ -1,5 +1,5 @@
 (exercise-dev-environment)=
-# 案例实战：Flink 开发环境搭建
+# 案例实战 Flink 开发环境搭建
 
 本案例实战主要带领读者完成对 Flink 开发环境的搭建。
 
@@ -11,25 +11,25 @@
    - 目前，我们可以在 Linux、macOS 和 Windows 操作系统上开发和运行 Flink。类 UNIX 操作系统（Linux 或 macOS）是大数据首选的操作系统，它们对 Flink 的支持更好，适合进行 Flink 学习和开发。后文会假设读者已经拥有了一个类 UNIX 操作系统。Windows 用户为了构建一个类 UNIX 环境，可以使用专门为 Linux 操作系统打造的子系统（Windows subsystem for Linux，即 WSL）或者是 Cygwin，又或者创建一个虚拟机，在虚拟机中安装 Linux 操作系统。
 
 2. JDK
-   - 和 Kafka 一样，Flink 开发基于 JDK，因此也需要提前安装好 JDK 1.8+ （Java 8 或更高的版本），配置好 Java 环境变量。
+   - 和 Kafka 一样，Flink 开发基于 JDK，因此也需要提前安装好 JDK 17+ （Java 17 或更高的版本），配置好 Java 环境变量。
 
 3. 其他工具
    - 其他的工具因开发者习惯不同来安装，不是 Flink 开发所必需的，但这里仍然建议提前安装好以下工具。
      - **Apache Maven 3.0+**
-       - Apache Maven 是一个项目管理工具，可以对 Java 或 Scala 项目进行构建及依赖管理，是进行大数据开发必备的工具。这里推荐使用 Maven 是因为 Flink 源码工程和本书的示例代码工程均使用 Maven 进行管理。
+       - Apache Maven 是一个项目管理工具，可以对 Java 项目进行构建及依赖管理，是进行大数据开发必备的工具。这里推荐使用 Maven 是因为 Flink 源码工程和本书的示例代码工程均使用 Maven 进行管理。
      - **IntelliJ IDEA**
        - IntelliJ IDEA 是一个非常强大的编辑器和开发工具，内置了 Maven 等一系列工具，是大数据开发必不可少的利器。Intellij IDEA 本来是一个商业软件，它提供了社区免费版本，免费版本已经基本能满足绝大多数的开发需求。
-       - 除 IntelliJ IDEA 之外，还有 Eclipse IDE 或 NetBeans IDE 等开发工具，读者可以根据自己的使用习惯选择。由于 IntelliJ IDEA 对 Scala 的支持更好，本书建议读者使用 IntelliJ IDEA。
+       - 除 IntelliJ IDEA 之外，还有 Eclipse IDE 或 NetBeans IDE 等开发工具，读者可以根据自己的使用习惯选择。
 
 ## 下载并安装 Flink
 
-从 Flink 官网下载编译好的 Flink 程序，把下载的.tgz 压缩包放在你想放置的目录。在下载时，Flink 提供了不同的选项，包括 Scala 2.11、Scala 2.12、源码版等。其中，前两个版本是 Flink 官方提供的可执行版，解压后可直接使用，无须从源码开始编译打包。Scala 不同版本间兼容性较差，对于 Scala 开发者来说，需要选择自己常用的版本，对于 Java 开发者来说，选择哪个 Scala 版本区别不大。本书写作时，使用的是 Flink 1.11 和 Scala 2.11，读者可以根据自身情况下载相应版本。
+从 Flink 官网下载编译好的 Flink 程序，把下载的.tgz 压缩包放在你想放置的目录。在下载时，Flink 提供了不同的选项，包括源码版等。本书写作时，使用的是 Flink 2.0.0，读者可以根据自身情况下载相应版本。
 
 按照下面的方式，解压该压缩包，进入解压目录，并启动 Flink 集群。
 
 ```bash
-$ tar -zxvf flink-1.11.2-bin-scala_2.11.tgz  # 解压
-$ cd flink-1.11.2-bin-scala_2.11  # 进入解压目录
+$ tar -zxvf flink-2.0.0-bin.tgz  # 解压
+$ cd flink-2.0.0-bin  # 进入解压目录
 $ ./bin/start-cluster.sh  # 启动 Flink 集群
 ```
 
@@ -48,15 +48,13 @@ Flink WebUI
 我们使用 Maven 从零开始创建一个 Flink 工程。
 
 ```bash
-$ mvn archetype:generate \
-    -DarchetypeGroupId=org.apache.flink \
-    -DarchetypeArtifactId=flink-quickstart-java \
-    -DarchetypeVersion=1.11.2 \
-    -DgroupId=com.myflink \
-    -DartifactId=flink-study-scala \
-    -Dversion=0.1 \
-    -Dpackage=quickstart \
-    -DinteractiveMode=false
+$ mvn archetype:generate -DarchetypeGroupId=org.apache.flink -DarchetypeArtifactId=flink-quickstart-java -DarchetypeVersion=2.0.0 -DgroupId=com.myflink -DartifactId=flink-study -Dversion=0.1 -Dpackage=quickstart -DinteractiveMode=false
+```
+
+在 Windows 下，需要将上述命令中的 `$` 符号去掉，并且使用双引号将每个选项括起来，例如：
+
+```bash
+mvn archetype:generate "-DarchetypeGroupId=org.apache.flink" "-DarchetypeArtifactId=flink-quickstart-java" "-DarchetypeVersion=2.0.0" "-DgroupId=com.myflink" "-DartifactId=flink-study" "-Dversion=0.1" "-Dpackage=quickstart" "-DinteractiveMode=false"
 ```
 
 archetype 是 Maven 提供的一种项目模板，是别人提前准备好了的项目的结构框架，用户只需要使用 Maven 工具下载这个模板，在这个模板的基础上丰富并完善代码逻辑。主流框架一般都准备好了 archetype，如 Spring、Hadoop 等。
@@ -73,7 +71,7 @@ width: 60%
 在 IntelliJ IDEA 中创建新工程
 ```
 
-如 {numref}`fig-Maven` 所示，选择左侧的“Maven”，并勾选“Create from archetype”，并单击右侧的“Add Archetype”按钮。
+如 {numref}`fig-Maven` 所示，选择左侧的“Maven Archetype”，并对于"Archetype” 一栏，单击右侧的“Add Archetype”按钮。
 
 ```{figure} ./img/Maven.png
 ---
@@ -83,7 +81,7 @@ width: 60%
 添加 Maven 项目
 ```
 
-如 {numref}`fig-archetype` 所示，在弹出的窗口中填写 archetype 信息。其中 GroupId 为 org.apache.flink，ArtifactId 为 flink-quickstart-java，Version 为 1.11.2，然后单击“OK”。这里主要是告诉 Maven 去资源库中下载哪个版本的模板。随着 Flink 的迭代开发，Version 也在不断更新，读者可以在 Flink 的 Maven 资源库中查看最新的版本。GroupId、ArtifactId、Version 可以唯一表示一个发布出来的 Java 程序包。配置好后，单击 Next 按钮进入下一步。
+如 {numref}`fig-archetype` 所示，在弹出的窗口中填写 archetype 信息。其中 GroupId 为 org.apache.flink，ArtifactId 为 flink-quickstart-java，Version 为 2.0.0，然后单击“OK”。这里主要是告诉 Maven 去资源库中下载哪个版本的模板。随着 Flink 的迭代开发，Version 也在不断更新，读者可以在 Flink 的 Maven 资源库中查看最新的版本。GroupId、ArtifactId、Version 可以唯一表示一个发布出来的 Java 程序包。配置好后，单击 Next 按钮进入下一步。
 
 ```{figure} ./img/archetype.png
 ---
@@ -103,17 +101,9 @@ width: 60%
 配置你的工程信息
 ```
 
-接下来可以继续单击“Next”按钮，注意最后一步选择你的工程所在的磁盘位置，单击“Finish”按钮，如 {numref}`fig-project-location` 所示。至此，一个 Flink 模板就下载好了。
+接下来可以继续单击“创建”按钮，
 
-```{figure} ./img/project-location.png
----
-name: fig-project-location
-width: 60%
----
-配置本工程的位置
-```
-
-工程结构如 {numref}`fig-project-structure` 所示。左侧的“Project”栏是工程结构，其中 src/main/java 文件夹是 Java 代码文件存放位置，src/main/scala 是 Scala 代码文件存放位置。我们可以在 StreamingJob 这个文件上继续修改，也可以重新创建一个新文件。
+工程结构如 {numref}`fig-project-structure` 所示。左侧的“Project”栏是工程结构，其中 src/main/java 文件夹是 Java 代码文件存放位置。我们可以在 StreamingJob 这个文件上继续修改，也可以重新创建一个新文件。
 
 ```{figure} ./img/project-structure.png
 ---
@@ -260,12 +250,12 @@ StreamExecutionEnvironment.getExecutionEnvironment();
 ```xml
 <dependency>
   <groupId>org.apache.flink</groupId>
-  <artifactId>flink-connector-kafka_${scala.binary.version}</artifactId>
-  <version>${flink.version}</version>
+  <artifactId>flink-connector-kafka</artifactId>
+  <version>2.0.0</version>
 </dependency>
 ```
 
-其中，`${scala.binary.version}` 是所用的 Scala 版本号，可以是 2.11 或 2.12，`${flink.version}` 是所用的 Flink 的版本号，比如 1.11.2。
+其中，`${flink.version}` 是所用的 Flink 的版本号，比如 2.0.0。
 
 ## 运行程序
 
@@ -288,7 +278,7 @@ width: 60%
 name: fig-result
 width: 60%
 ---
-WordCount 程序运行结果
+某个程序的输出结果
 ```
 
 
@@ -315,8 +305,8 @@ $ mvn clean package
 
 ```bash
 $ bin/flink run --class
-com.flink.tutorials.java.api.projects.wordcount.WordCountKafkaInStdOut
-/Users/luweizheng/Projects/big-data/flink-tutorials/target/flink-tutorials-0.1.jar
+com.myflink.quickstart.WordCountKafkaInStdOut
+/Users/luweizheng/Projects/big-data/flink-study/target/flink-study-0.1.jar
 ```
 
 如{numref}`fig-flink-WebUI-job`示，这时，Flink WebUI 上就多了一个 Flink 作业。
@@ -343,8 +333,8 @@ $ ./bin/stop-cluster.sh
 
 Flink 开发和调试过程中，一般有如下几种方式运行程序。
 - 使用 IntelliJ IDEA 内置的绿色运行按钮。这种方式主要在本地调试时使用。
-- 使用 Flink 提供的命令行工具向集群提交作业，包括 Java 和 Scala 程序。这种方式更适合生产环境。
-- 使用 Flink 提供的其他命令行工具，比如针对 Scala、Python 和 SQL 的交互式环境。
+- 使用 Flink 提供的命令行工具向集群提交作业，包括 Java 程序。这种方式更适合生产环境。
+- 使用 Flink 提供的其他命令行工具，比如针对 SQL 的交互式环境。
 
 对于新手，可以先使用 IntelliJ IDEA 提供的内置运行按钮，熟练后再使用命令行工具。
 

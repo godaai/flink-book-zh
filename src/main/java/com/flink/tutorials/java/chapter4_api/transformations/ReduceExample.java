@@ -16,7 +16,7 @@ public class ReduceExample {
 
         StreamExecutionEnvironment senv = StreamExecutionEnvironment.getExecutionEnvironment();
 
-        DataStream<Score> dataStream = senv.fromElements(
+        DataStream<Score> dataStream = senv.fromData(
                 Score.of("Li", "English", 90), Score.of("Wang", "English", 88),
                 Score.of("Li", "Math", 85), Score.of("Wang", "Math", 92),
                 Score.of("Liu", "Math", 91), Score.of("Liu", "English", 87));

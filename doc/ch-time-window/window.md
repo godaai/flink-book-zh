@@ -22,16 +22,16 @@
 // Keyed Window
 stream
        .keyBy(<KeySelector>)           //  按照一个 Key 进行分组
-       .window(<WindowAssigner>)       //  将数据流中的元素分配到相应的窗口中
+       .window(<WindowAssigner>)       //  将数据流中的元素分配到相应的窗口
       [.trigger(<Trigger>)]            //  指定触发器 Trigger（可选）
-      [.evictor(<Evictor>)]            //  指定清除器 Evictor(可选)
+      [.evictor(<Evictor>)]            //  指定清除器 Evictor(可选）
        .reduce/aggregate/process()     //  窗口处理函数 Window Function
 
 // Non-Keyed Window
 stream
        .windowAll(WindowAssigner)      //  不分组，将数据流中的所有元素分配到相应的窗口中
       [.trigger(<Trigger>)]            //  指定触发器 Trigger（可选）
-      [.evictor(<Evictor>)]            //  指定清除器 Evictor(可选)
+      [.evictor(<Evictor>)]            //  指定清除器 Evictor(可选）
        .reduce/aggregate/process()     //  窗口处理函数 Window Function
 ```
 
@@ -74,7 +74,7 @@ Count-based Window 根据元素到达窗口的先后顺序管理窗口，到达�
 
 ### 滚动窗口
 
-滚动窗口模式下窗口之间不重叠，且窗口长度（Size）是固定的。我们可以用 `TumblingEventTimeWindows` 和 `TumblingProcessingTimeWindows` 创建一个基于 Event Time 或 Processing Time 的滚动时间窗口。窗口的长度可以用 `org.apache.flink.streaming.api.windowing.time.Time` 中的 `seconds`、`minutes`、`hours` 和 `days` 来设置。
+滚动窗口模式下窗口之间不重叠，且窗口长度（Size）是固定的。我们可以用 `TumblingEventTimeWindows` 和 `TumblingProcessingTimeWindows` 创建一个基于 Event Time 或 Processing Time 的滚动时间窗口。窗口的长度可以用 `Duration` 中的 `ofSeconds`、`ofMinutes`、`ofHours` 和 `ofDays` 来设置。
 
 ```{figure} ./img/tumbling-window.png
 ---
@@ -85,7 +85,7 @@ align: center
 滚动窗口
 ```
 
-下面的代码展示了如何使用滚动窗口。代码中最后一个例子，我们在固定长度的基础上设置了偏移（Offset）。默认情况下，时间窗口会做一个对齐，比如设置一个一小时的窗口，那么窗口的起止时间是 [0:00:00.000 - 0:59:59.999)。如果设置了 Offset，那么窗口的起止时间将变为 [0:15:00.000 - 1:14:59.999)。Offset 可以用在全球不同时区设置上，如果系统时间基于格林威治标准时间（UTC-0），中国的当地时间可以设置 offset 为 `Time.hours(-8)`。
+下面的代码展示了如何使用滚动窗口。代码中最后一个例子，我们在固定长度的基础上设置了偏移（Offset）。默认情况下，时间窗口会做一个对齐，比如设置一个一小时的窗口，那么窗口的起止时间是 [0:00:00.000 - 0:59:59.999)。如果设置了 Offset，那么窗口的起止时间将变为 [0:15:00.000 - 1:14:59.999)。Offset 可以用在全球不同时区设置上，如果系统时间基于格林威治标准时间（UTC-0），中国的当地时间可以设置 offset 为 `Duration.ofHours(-8)`。
 
 ```java
 DataStream<T> input = ...
@@ -93,23 +93,23 @@ DataStream<T> input = ...
 // 基于 Event Time 的滚动窗口
 input
     .keyBy(<KeySelector>)
-    .window(TumblingEventTimeWindows.of(Time.seconds(5)))
+    .window(TumblingEventTimeWindows.of(Duration.ofSeconds(5)))
     .<window function>(...)
 
 // 基于 Processing Time 的滚动窗口
 input
     .keyBy(<KeySelector>)
-    .window(TumblingProcessingTimeWindows.of(Time.seconds(5)))
+    .window(TumblingProcessingTimeWindows.of(Duration.ofSeconds(5)))
     .<window function>(...)
 
-// 在小时级滚动窗口上设置 15 分钟的 Offset 偏移
+// 在小时级滚动窗口上设置 UTC-8 时区的偏移
 input
     .keyBy(<KeySelector>)
-    .window(TumblingEventTimeWindows.of(Time.hours(1), Time.minutes(15)))
+    .window(TumblingEventTimeWindows.of(Duration.ofHours(1), Duration.ofHours(-8)))
     .<window function>(...)
 ```
 
-读者在其他的代码中可能看到过，时间窗口使用的是 `timeWindow()` 而非 `window()`，比如，`input.keyBy(...).timeWindow(Time.seconds(1))`。`timeWindow()` 是一种简写。当我们在执行环境设置了 `TimeCharacteristic.EventTime` 时，Flink 对应调用 `TumblingEventTimeWindows`；如果我们基于 `TimeCharacteristic.ProcessingTime`，Flink 使用 `TumblingProcessingTimeWindows`。
+读者在其他的代码中可能看到过，时间窗口使用的是 `timeWindow()` 而非 `window()`，比如，`input.keyBy(...).timeWindow(Duration.ofSeconds(1))`。`timeWindow()` 是一种简写。当我们在执行环境设置了 `TimeCharacteristic.EventTime` 时，Flink 对应调用 `TumblingEventTimeWindows`；如果我们基于 `TimeCharacteristic.ProcessingTime`，Flink 使用 `TumblingProcessingTimeWindows`。
 
 ### 滑动窗口
 
@@ -124,7 +124,7 @@ align: center
 滑动窗口
 ```
 
-跟前面介绍的一样，我们使用 `Time` 类中的时间单位来定义 Slide 和 Size，也可以设置 offset。同样，`timeWindow()` 是一种缩写，根据执行环境中设置的时间语义来选择相应的方法设置窗口。
+跟前面介绍的一样，我们使用 `Duration` 类中的时间单位来定义 Slide 和 Size，也可以设置 offset。同样，`timeWindow()` 是一种缩写，根据执行环境中设置的时间语义来选择相应的方法设置窗口。
 
 ```java
 DataStream<T> input = ...
@@ -132,19 +132,19 @@ DataStream<T> input = ...
 // 基于 Event Time 的滑动窗口
 input
     .keyBy(<KeySelector>)
-    .window(SlidingEventTimeWindows.of(Time.seconds(10), Time.seconds(5)))
+    .window(SlidingEventTimeWindows.of(Duration.ofMinutes(5), Duration.ofMinutes(1)))
     .<window function>(...)
 
 // 基于 Processing Time 的滑动窗口
 input
     .keyBy(<KeySelector>)
-    .window(SlidingProcessingTimeWindows.of(Time.seconds(10), Time.seconds(5)))
+    .window(SlidingProcessingTimeWindows.of(Duration.ofMinutes(5), Duration.ofMinutes(1)))
     .<window function>(...)
 
-// 在滑动窗口上设置 Offset 偏移
+// 在滑动窗口上设置 UTC-8 时区的偏移
 input
     .keyBy(<KeySelector>)
-    .window(SlidingProcessingTimeWindows.of(Time.hours(12), Time.hours(1), Time.hours(-8)))
+    .window(SlidingProcessingTimeWindows.of(Duration.ofHours(12), Duration.ofHours(1), Duration.ofHours(-8)))
     .<window function>(...)
 ```
 
@@ -169,7 +169,7 @@ DataStream<T> input = ...
 // 基于 Event Time 定长 Session Gap 的会话窗口
 input
     .keyBy(<KeySelector>)
-    .window(EventTimeSessionWindows.withGap(Time.minutes(10)))
+    .window(EventTimeSessionWindows.withGap(Duration.ofMinutes(10)))
     .<window function>(...)
 
 // 基于 Event Time 变长 Session Gap 的会话窗口
@@ -183,7 +183,7 @@ input
 // 基于 Processing Time 定长 Session Gap 的会话窗口
 input
     .keyBy(<KeySelector>)
-    .window(ProcessingTimeSessionWindows.withGap(Time.minutes(10)))
+    .window(ProcessingTimeSessionWindows.withGap(Duration.ofMinutes(10)))
     .<window function>(...)
 
 
@@ -213,7 +213,7 @@ senv.setStreamTimeCharacteristic(TimeCharacteristic.ProcessingTime)
 // reduce 的返回类型必须和输入类型 StockPrice 一致
 DataStream<StockPrice> sum = stockStream
     .keyBy(s -> s.symbol)
-    .timeWindow(Time.seconds(10))
+    .timeWindow(Duration.ofSeconds(10))
     .reduce((s1, s2) -> StockPrice.of(s1.symbol, s2.price, s2.ts,s1.volume + s2.volume));
 ```
 
@@ -286,7 +286,7 @@ DataStream<StockPrice> stockStream = ...
 
 DataStream<Tuple2<String, Double>> average = stockStream
     .keyBy(s -> s.symbol)
-    .timeWindow(Time.seconds(10))
+    .timeWindow(Duration.ofSeconds(10))
     .aggregate(new AverageAggregate());
 ```
 
@@ -307,7 +307,7 @@ aggregate 的工作流程
 
 ```java
 /**
- * 函数接收四个泛型
+ * 函数接收四个泛型：
  * IN   输入类型
  * OUT  输出类型
  * KEY  keyBy 中按照 Key 分组，Key 的类型
@@ -334,7 +334,7 @@ public abstract class ProcessWindowFunction<IN, OUT, KEY, W extends Window> exte
     // 返回当前正在处理的 Window
 		public abstract W window();
 
-    // 返回当前 Process Time
+    // 返回当前 Processing Time
 		public abstract long currentProcessingTime();
 
     // 返回当前 Event Time 对应的 Watermark
@@ -422,7 +422,7 @@ DataStream<Tuple4<String, Double, Double, Long>> maxMin = stockStream
     .map(s -> Tuple4.of(s.symbol, s.price, s.price, 0L))
     .returns(Types.TUPLE(Types.STRING, Types.DOUBLE, Types.DOUBLE, Types.LONG))
     .keyBy(s -> s.f0)
-    .timeWindow(Time.seconds(10))
+    .timeWindow(Duration.ofSeconds(10))
     .reduce(new MaxMinReduce(), new WindowEndProcessFunction());
 
 // 增量计算最大值和最小值
@@ -520,55 +520,62 @@ public abstract class Trigger<T, W extends Window> implements Serializable {
 }
 ```
 
-接下来我们以一个提前计算的案例来解释如何使用自定义的 Trigger。在股票等交易场景中，我们比较关注价格急跌的情况，默认窗口长度是 60 秒，如果价格跌幅超过 5%，则立即执行 Window Function，如果价格跌幅在 1% 到 5% 之内，那么 10 秒后触发 Window Function。
+接下来我们以一个提前计算的案例来解释如何使用自定义的 Trigger。在股票等交易场景中，我们比较关注价格急跌的情况，默认窗口长度是 60 秒，如果价格跌幅超过 5%，则立即执行 Window Function，如果价格跌幅在 1% 到 5% 之间，那么 10 秒后触发 Window Function。
 
-```scala
+```java
+// 基于计数的触发器
+input
+    .keyBy(<KeySelector>)
+    .window(TumblingEventTimeWindows.of(Duration.ofMinutes(1)))
+    .trigger(CountTrigger.of(100))  // 每收集100条数据触发
+    .<window function>(...)
+
 public static class MyTrigger extends Trigger<StockPrice, TimeWindow> {
     @Override
     public TriggerResult onElement(StockPrice element,
-                                   long time,
+                                   long timestamp,
                                    TimeWindow window,
-                                   Trigger.TriggerContext triggerContext) throws Exception {
-        ValueState<Double> lastPriceState = triggerContext.getPartitionedState(
-            new ValueStateDescriptor<Double>("lastPriceState", Types.DOUBLE)
+                                   TriggerContext context) throws Exception {
+        ValueState<Double> lastPriceState = context.getPartitionedState(
+            new ValueStateDescriptor<>("lastPriceState", Types.DOUBLE)
         );
 
-        // 设置返回默认值为 CONTINUE
         TriggerResult triggerResult = TriggerResult.CONTINUE;
 
-        // 第一次使用 lastPriceState 时状态是空的, 需要先进行判断
-        // 如果是空，返回一个 null
-        if (null != lastPriceState.value()) {
-            if (lastPriceState.value() - element.price > lastPriceState.value()* 0.05) {
-                // 如果价格跌幅大于 5%，直接 FIRE_AND_PURGE
+        if (lastPriceState.value() != null) {
+            double priceDrop = lastPriceState.value() - element.price;
+            double priceDropRatio = priceDrop / lastPriceState.value();
+
+            if (priceDropRatio > 0.05) {
                 triggerResult = TriggerResult.FIRE_AND_PURGE;
-            } else if ((lastPriceState.value() - element.price)> lastPriceState.value() * 0.01) {
-                // 跌幅不大，注册一个 10 秒后的 Timer
-                long t = triggerContext.getCurrentProcessingTime()+ (10 * 1000 - (triggerContext.getCurrentProcessingTime() % 10 * 1000));
-                triggerContext.registerProcessingTimeTimer(t);
+            } else if (priceDropRatio > 0.01) {
+                context.registerProcessingTimeTimer(
+                    context.getCurrentProcessingTime() + Duration.ofSeconds(10).toMillis()
+                );
             }
         }
         lastPriceState.update(element.price);
         return triggerResult;
     }
 
-    // 这里我们不用 EventTime，直接返回一个 CONTINUE
     @Override
-    public TriggerResult onEventTime(long time, TimeWindow window, Trigger.TriggerContext triggerContext) {
-      	return TriggerResult.CONTINUE;
+    public void onProcessingTime(long time, TimeWindow window,
+                                TriggerContext context) {
+        return TriggerResult.FIRE_AND_PURGE;
     }
 
     @Override
-    public TriggerResult onProcessingTime(long time, TimeWindow window, Trigger.TriggerContext triggerContext) {
-      	return TriggerResult.FIRE_AND_PURGE;
+    public void onEventTime(long time, TimeWindow window,
+                           TriggerContext context) {
+        return TriggerResult.CONTINUE;
     }
 
     @Override
-    public void clear(TimeWindow window, Trigger.TriggerContext triggerContext) {
-      ValueState<Double> lastPriceState = triggerContext.getPartitionedState(
-        new ValueStateDescriptor<Double>("lastPriceState", Types.DOUBLE)
-      );
-      	lastPriceState.clear();
+    public void clear(TimeWindow window, TriggerContext context) {
+        ValueState<Double> lastPriceState = context.getPartitionedState(
+            new ValueStateDescriptor<>("lastPriceState", Types.DOUBLE)
+        );
+        lastPriceState.clear();
     }
 }
 ```
@@ -580,7 +587,7 @@ DataStream<StockPrice> stockStream = ...
 
 DataStream<Tuple2<String, Double>> average = stockStream
     .keyBy(s -> s.symbol)
-    .timeWindow(Time.seconds(60))
+    .timeWindow(Duration.ofSeconds(60))
     .trigger(new MyTrigger())
     .aggregate(new AverageAggregate());
 ```
@@ -599,36 +606,39 @@ DataStream<Tuple2<String, Double>> average = stockStream
 
 ```java
 /**
-	* T 为元素类型
-	* W 为窗口
-  */
-public interface Evictor<T, W extends Window> extends Serializable {
+ * Context 用于获取 Evictor 的相关信息
+ */
+public interface Evictor.Context {
+    /**
+     * 获取当前元素的时间戳
+     */
+    long getCurrentElementTimestamp();
 
-    // 在 Window Function 前调用
-    void evictBefore(Iterable<TimestampedValue<T>> elements, int size, W window, EvictorContext evictorContext);
+    /**
+     * 获取当前 Processing Time
+     */
+    long getCurrentProcessingTime();
 
-    // 在 Window Function 后调用
-    void evictAfter(Iterable<TimestampedValue<T>> elements, int size, W window, EvictorContext evictorContext);
+    /**
+     * 获取当前 Watermark
+     */
+    long getCurrentWatermark();
 
-    // Evictor 的上下文
-    interface EvictorContext {
-        long getCurrentProcessingTime();
-        MetricGroup getMetricGroup();
-        long getCurrentWatermark();
-    }
+    /**
+     * 获取状态
+     */
+    <S extends State> S getPartitionedState(StateDescriptor<S, ?> stateDescriptor);
 }
 ```
-
-`evictBefore` 和 `evictAfter` 分别在 Window Function 之前和之后被调用，窗口的所有元素被放在了 `Iterable<TimestampedValue<T>>`，我们要实现自己的清除逻辑。清除逻辑主要针对全量计算，对于增量计算的 `ReduceFunction` 和 `AggregateFunction`，我们没必要使用 Evictor。
 
 一个清除的逻辑可以写成：
 
 ```java
 for (Iterator<TimestampedValue<Object>> iterator = elements.iterator(); iterator.hasNext();) {
-  TimestampedValue<Object> record = iterator.next();
-  if (record.getTimestamp() <= evictCutoff) {
-    iterator.remove();
-  }
+    TimestampedValue<Object> record = iterator.next();
+    if (record.getTimestamp() <= evictCutoff) {
+        iterator.remove();
+    }
 }
 ```
 
@@ -636,3 +646,53 @@ Flink 提供了一些实现好的 Evictor，例如：
 
 * `CountEvictor` 保留一定数目的元素，多余的元素按照从前到后的顺序先后清理。
 * `TimeEvictor` 保留一个时间段的元素，早于这个时间段的元素会被清理。
+
+### 状态管理改进
+
+在 Flink 2.0 中，状态管理有了显著的改进：
+
+1. **更细粒度的状态管理**
+   - 支持更细粒度的状态划分
+   - 改进了状态的生命周期管理
+   - 支持更灵活的状态恢复机制
+
+2. **状态使用示例**
+
+```java
+// 使用 ManagedState
+public class StatefulWindowFunction extends ProcessWindowFunction<IN, OUT, KEY, W> {
+    private ValueState<Integer> countState;
+    private ListState<IN> elementsState;
+
+    @Override
+    public void open(Configuration parameters) {
+        ValueStateDescriptor<Integer> countDesc = 
+            new ValueStateDescriptor<>("count", Integer.class);
+        countState = getRuntimeContext().getState(countDesc);
+
+        ListStateDescriptor<IN> elementsDesc = 
+            new ListStateDescriptor<>("elements", TypeInformation.of(IN.class));
+        elementsState = getRuntimeContext().getListState(elementsDesc);
+    }
+
+    @Override
+    public void process(
+        KEY key,
+        Context context,
+        Iterable<IN> elements,
+        Collector<OUT> out) {
+        // 使用状态
+        Integer count = countState.value();
+        List<IN> elementList = new ArrayList<>();
+        elementsState.get().forEach(elementList::add);
+
+        // 更新状态
+        countState.update(count + elementList.size());
+
+        // 清除状态
+        elementsState.clear();
+    }
+}
+```
+
+{{ ... }}

@@ -2,16 +2,17 @@ package com.flink.tutorials.java.chapter6_state;
 
 import com.flink.tutorials.java.utils.taobao.BehaviorPattern;
 import com.flink.tutorials.java.utils.taobao.UserBehavior;
-import com.flink.tutorials.java.utils.taobao.UserBehaviorSource;
+import com.flink.tutorials.java.utils.taobao.UserBehaviorReaderFormat;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.state.BroadcastState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.configuration.Configuration;
-import org.apache.flink.streaming.api.TimeCharacteristic;
+import org.apache.flink.connector.file.src.FileSource;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.BroadcastStream;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.KeyedStream;
@@ -24,27 +25,32 @@ public class BroadcastStateExample {
     public static void main(String[] args) throws Exception {
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
         // 主数据流
-        DataStream<UserBehavior> userBehaviorStream = env.addSource(new UserBehaviorSource("taobao/UserBehavior-20171201.csv"))
-                .assignTimestampsAndWatermarks(
-                        WatermarkStrategy
-                                .<UserBehavior>forMonotonousTimestamps()
-                                .withTimestampAssigner((event, timestamp) -> event.timestamp * 1000)
-                );
+        String filePath = ClassLoader.getSystemResource("taobao/UserBehavior-20171201.csv")
+                .getPath();
+        FileSource<UserBehavior> source = FileSource
+                .forRecordStreamFormat(new UserBehaviorReaderFormat(), new Path(filePath))
+                .build();
 
-        // BehaviorPattern数据流
-        DataStream<BehaviorPattern> patternStream = env.fromElements(new BehaviorPattern("pv", "buy"));
+        DataStream<UserBehavior> userBehaviorStream = env.fromSource(source,
+                WatermarkStrategy
+                        .<UserBehavior>forMonotonousTimestamps()
+                        .withTimestampAssigner((event, timestamp) -> event.timestamp * 1000),
+                "BehaviorSource"
+        );
 
-        // Broadcast State只能使用 Key->Value 结构，基于MapStateDescriptor
+        // BehaviorPattern 数据流
+        DataStream<BehaviorPattern> patternStream = env.fromData(new BehaviorPattern("pv", "buy"));
+
+        // Broadcast State 只能使用 Key->Value 结构，基于 MapStateDescriptor
         MapStateDescriptor<Void, BehaviorPattern> broadcastStateDescriptor = new MapStateDescriptor<>("behaviorPattern", Types.VOID, Types.POJO(BehaviorPattern.class));
         BroadcastStream<BehaviorPattern> broadcastStream = patternStream.broadcast(broadcastStateDescriptor);
 
-        // 生成一个KeyedStream
+        // 生成一个 KeyedStream
         KeyedStream<UserBehavior, Long> keyedStream = userBehaviorStream.keyBy(user -> user.userId);
 
-        // 在KeyedStream上进行connect和process
+        // 在 KeyedStream 上进行 connect 和 process
         DataStream<Tuple2<Long, BehaviorPattern>> matchedStream = keyedStream
                 .connect(broadcastStream)
                 .process(new BroadcastPatternFunction());
@@ -56,11 +62,11 @@ public class BroadcastStateExample {
 
     /**
      * 四个泛型分别为：
-     * 1. KeyedStream中Key的数据类型
+     * 1. KeyedStream 中 Key 的数据类型
      * 2. 主数据流的数据类型
      * 3. 广播流的数据类型
      * 4. 输出类型
-     * */
+     */
     public static class BroadcastPatternFunction
             extends KeyedBroadcastProcessFunction<Long, UserBehavior, BehaviorPattern, Tuple2<Long, BehaviorPattern>> {
 
@@ -70,10 +76,10 @@ public class BroadcastStateExample {
         private MapStateDescriptor<Void, BehaviorPattern> bcPatternDesc;
 
         @Override
-        public void open(Configuration configuration) {
+        public void open(OpenContext openContext) {
             lastBehaviorState = getRuntimeContext().getState(
-                    new ValueStateDescriptor<String>("lastBehaviorState", Types.STRING));
-            bcPatternDesc = new MapStateDescriptor<Void, BehaviorPattern>("behaviorPattern", Types.VOID, Types.POJO(BehaviorPattern.class));
+                    new ValueStateDescriptor<>("lastBehaviorState", Types.STRING));
+            bcPatternDesc = new MapStateDescriptor<>("behaviorPattern", Types.VOID, Types.POJO(BehaviorPattern.class));
         }
 
         @Override
@@ -81,8 +87,8 @@ public class BroadcastStateExample {
                                             Context context,
                                             Collector<Tuple2<Long, BehaviorPattern>> collector) throws Exception {
             BroadcastState<Void, BehaviorPattern> bcPatternState = context.getBroadcastState(bcPatternDesc);
-            // 将新数据更新至Broadcast State，这里使用一个null作为Key
-            // 在本场景中所有数据都共享一个Pattern，因此这里伪造了一个Key
+            // 将新数据更新至 Broadcast State，这里使用一个 null 作为 Key
+            // 在本场景中所有数据都共享一个 Pattern，因此这里伪造了一个 Key
             bcPatternState.put(null, pattern);
         }
 
@@ -91,7 +97,7 @@ public class BroadcastStateExample {
                                    ReadOnlyContext context,
                                    Collector<Tuple2<Long, BehaviorPattern>> collector) throws Exception {
 
-            // 获取最新的Broadcast State
+            // 获取最新的 Broadcast State
             BehaviorPattern pattern = context.getBroadcastState(bcPatternDesc).get(null);
             String lastBehavior = lastBehaviorState.value();
             if (pattern != null && lastBehavior != null) {

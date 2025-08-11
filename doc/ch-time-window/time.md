@@ -53,16 +53,18 @@ Ingestion Time 通常是 Event Time 和 Processing Time 之间的一个折中方
 
 ## 设置时间语义
 
-在 Flink 中，我们需要在执行环境层面设置使用哪种时间语义。下面的代码使用 Event Time：
+Flink 默认使用 Event Time 作为时间语义。如果您需要使用 Processing Time 或 Ingestion Time，可以通过以下方式设置：
 
 ```java
-env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+// 使用 Processing Time
+env.getConfig().setAutoWatermarkInterval(0);
+
+// 使用 Ingestion Time
+env.getConfig().setAutoWatermarkInterval(1000L); // 设置 Watermark 间隔为 1 秒
 ```
 
-如果想用另外两种时间语义，需要替换为：`TimeCharacteristic.ProcessingTime` 和 `TimeCharacteristic.IngestionTime`。
-
 :::info
-首次进行时间相关计算的读者可能因为没有正确设置数据流时间相关属性而得不到正确的结果。包括本书前序章节的示例代码在内，一些测试或演示代码常常使用 `StreamExecutionEnvironment.fromElements()` 或 `StreamExecutionEnvironment.fromCollection()` 方法来创建一个 `DataStream`，用这种方法生成的 `DataStream` 没有时序性，如果不对元素设置时间戳，无法进行时间相关的计算。或者说，在一个没有时序性的数据流上进行时间相关计算，无法得到正确的结果。想要建立数据之间的时序性，一种方法是继续用 `StreamExecutionEnvironment.fromElements()` 或 `StreamExecutionEnvironment.fromCollection()` 方法，使用 Event Time 时间语义，对数据流中每个元素的 Event Time 进行赋值。另一种方法是使用其他的 Source，比如 `StreamExecutionEnvironment.socketTextStream()` 或 Kafka，这些 Source 的输入数据本身带有时序性，支持 Processinng Time 时间语义。
+首次进行时间相关计算的读者可能因为没有正确设置数据流时间相关属性而得不到正确的结果。包括本书前序章节的示例代码在内，一些测试或演示代码常常使用 `StreamExecutionEnvironment.formData()` 方法来创建一个 `DataStream`，用这种方法生成的 `DataStream` 没有时序性，如果不对元素设置时间戳，无法进行时间相关的计算。或者说，在一个没有时序性的数据流上进行时间相关计算，无法得到正确的结果。想要建立数据之间的时序性，一种方法是继续用 `StreamExecutionEnvironment.formData()` 方法，使用 Event Time 时间语义，对数据流中每个元素的 Event Time 进行赋值。另一种方法是使用其他的 Source，比如 `StreamExecutionEnvironment.socketTextStream()` 或 Kafka，这些 Source 的输入数据本身带有时序性，支持 Processinng Time 时间语义。
 :::
 
 ## Event Time 和 Watermark
@@ -117,7 +119,7 @@ align: center
 
 ### Source
 
-我们可以在 Source 阶段完成时间戳抽取和 Watermark 生成的工作。Flink 1.11 开始推出了新的 Source 接口，并计划逐步替代老的 Source 接口，我们将在第七章展示两种接口的具体工作方式，这里暂时以老的 Source 接口来展示时间戳抽取和 Watermark 生成的过程。在老的 Source 接口中，通过自定义 `SourceFunction` 或 `RichSourceFunction`，在 `SourceContext` 里重写 `void collectWithTimestamp(T element, long timestamp)` 和 `void emitWatermark(Watermark mark)` 两个方法，其中，`collectWithTimestamp()` 给数据流中的每个元素 T 赋值一个 `timestamp` 作为 Event Time，`emitWatermark()` 生成 Watermark。下面的代码展示了调用这两个方法抽取时间戳并生成 Watermark。
+我们可以在 Source 阶段完成时间戳抽取和 Watermark 生成的工作。Flink 2.0 引入了全新的 DataStream V2 API，使用新的 Source 接口来替代旧的 SourceFunction 接口。在新的接口中，我们可以通过实现 `SourceReader` 接口来完成时间戳抽取和 Watermark 生成。下面的代码展示了如何使用 DataStream V2 API 来实现这一功能。
 
 ```java
 class MyType {
@@ -129,20 +131,28 @@ class MyType {
   ...
 }
 
-class MySource extends RichSourceFunction[MyType] {
+class MySourceReader implements SourceReader<MyType, MyType> {
   @Override
-  public void run(SourceContext<MyType> ctx) throws Exception {
-    while (/* condition */) {
-      MyType next = getNext();
-      ctx.collectWithTimestamp(next, next.eventTime);
-
-      if (next.hasWatermarkTime()) {
-        ctx.emitWatermark(new Watermark(next.watermarkTime));
-      }
+  public void emitNextRecord() throws Exception {
+    MyType next = getNext();
+    
+    // 使用 RecordEmitter 来发出带时间戳的记录
+    RecordEmitter<MyType> emitter = getEmitter();
+    emitter.emitRecord(next, next.eventTime);
+    
+    if (next.hasWatermark) {
+      emitter.emitWatermark(new Watermark(next.watermarkTime));
     }
   }
 }
+
+// 在 Source 构建时使用
+Source<MyType, MyType> source = SourceBuilder
+  .forSourceReader(new MySourceReader())
+  .build();
 ```
+
+在 Flink 2.0 的 DataStream V2 API 中，时间戳抽取和 Watermark 生成的逻辑更加清晰和现代化，使用 `RecordEmitter` 来统一处理记录的发出和 Watermark 的生成。这种方式提供了更好的类型安全性和更清晰的代码结构。
 
 ### Source 之后
 
@@ -156,8 +166,8 @@ DataStream<MyType> stream = ...
 DataStream<MyType> withTimestampsAndWatermarks = stream
         .assignTimestampsAndWatermarks(
             WatermarkStrategy
-                .forGenerator(...)
-                .withTimestampAssigner(...)
+                .forGenerator(new MyWatermarkGenerator())
+                .withTimestampAssigner((event, timestamp) -> event.eventTime)
         );
 ```
 
@@ -217,7 +227,6 @@ public static class MyPeriodicGenerator implements WatermarkGenerator<Tuple2<Str
         // Watermark 比 currentMaxTimestamp 最大值慢 1 分钟
         output.emitWatermark(new Watermark(currentMaxTimestamp - maxOutOfOrderness));
     }
-
 }
 ```
 
@@ -229,8 +238,9 @@ public static class MyPeriodicGenerator implements WatermarkGenerator<Tuple2<Str
 // 第二个字段是时间戳
 DataStream<Tuple2<String, Long>> watermark = input.assignTimestampsAndWatermarks(
     WatermarkStrategy
-        .forGenerator((context -> new MyPeriodicGenerator()))
-        .withTimestampAssigner((event, recordTimestamp) -> event.f1));
+        .forGenerator(new MyPeriodicGenerator())
+        .withTimestampAssigner((event, timestamp) -> event.f1)
+);
 ```
 
 考虑到这种基于时间戳最大值的场景比较普遍，Flink 已经帮我们封装好了这样的代码，名为 `BoundedOutOfOrdernessWatermarks`，其内部实现与上面的代码几乎一致，我们只需要将最大的延迟时间作为参数传入：

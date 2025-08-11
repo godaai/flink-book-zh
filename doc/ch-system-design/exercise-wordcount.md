@@ -1,5 +1,5 @@
 (exercise-wordcount)=
-# 案例实战：WordCount
+# 练习：WordCount
 
 :::{note}
 
@@ -41,11 +41,17 @@ Or to take arms against a sea of troubles,
 :::
 
 ```java
-Configuration conf = new Configuration();
-// 访问 http://localhost:8082 可以看到 Flink Web UI
-conf.setInteger(RestOptions.PORT, 8082);
-// 创建本地执行环境，并行度为 2
-StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment(2, conf);
+// 创建执行环境配置
+ExecutionOptions executionOptions = ExecutionOptions.newBuilder()
+    .setParallelism(2)
+    .build();
+
+// 创建执行环境
+ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+env.setExecutionOptions(executionOptions);
+
+// 配置 Web UI 端口
+env.getConfig().setWebMonitorPort(8082);
 ```
 
 ## 实验报告

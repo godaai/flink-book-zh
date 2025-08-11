@@ -54,8 +54,8 @@ DataStream<T> lateStream = result.getSideOutput(lateOutputTag);
 
 ```java
 /**
-  * ProcessWindowFunction 接收的泛型参数分别为：[输入类型、输出类型、Key、Window]
-  */
+ * ProcessWindowFunction 接收的泛型参数分别为：[输入类型、输出类型、Key、Window]
+ */
 public static class AllowedLatenessFunction extends ProcessWindowFunction<Tuple3<String, Long, Integer>, Tuple4<String, String, Integer, String>, String, TimeWindow> {
     @Override
     public void process(String key,
@@ -63,19 +63,19 @@ public static class AllowedLatenessFunction extends ProcessWindowFunction<Tuple3
                         Iterable<Tuple3<String, Long, Integer>> elements,
                         Collector<Tuple4<String, String, Integer, String>> out) throws Exception {
         ValueState<Boolean> isUpdated = context.windowState().getState(
-          new ValueStateDescriptor<Boolean>("isUpdated", Types.BOOLEAN));
+            new ValueStateDescriptor<Boolean>("isUpdated", Types.BOOLEAN));
 
         int count = 0;
         for (Object i : elements) {
-          	count++;
+            count++;
         }
 
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-        if (null == isUpdated.value() || isUpdated.value()== false) {
+        if (null == isUpdated.value() || isUpdated.value() == false) {
             // 第一次使用 process 函数时， Boolean 默认初始化为 false，因此窗口函数第一次被调用时会进入这里
             out.collect(Tuple4.of(key, format.format(Calendar.getInstance().getTime()), count, "first"));
-          	isUpdated.update(true);
+            isUpdated.update(true);
         } else {
             // 之后 isUpdated 被置为 true，窗口函数因迟到数据被调用时会进入这里
             out.collect(Tuple4.of(key, format.format(Calendar.getInstance().getTime()), count, "updated"));
@@ -87,14 +87,13 @@ public static class AllowedLatenessFunction extends ProcessWindowFunction<Tuple3
 env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
 // 数据流有三个字段：（key, 时间戳, 数值）
-DataStream<Tuple3<String, Long, Integer>> input = ...
+DataStream<Tuple3<String, Long, Integer>> input = ...;
 
 DataStream<Tuple4<String, String, Integer, String>> allowedLatenessStream = input
-  		.keyBy(item -> item.f0)
-      .timeWindow(Time.seconds(5))
-      .allowedLateness(Time.seconds(5))
-      .process(new AllowedLatenessFunction());
-```
+    .keyBy(item -> item.f0)
+    .timeWindow(Duration.ofSeconds(5))
+    .allowedLateness(Duration.ofSeconds(5))
+    .process(new AllowedLatenessFunction());```
 
 在上面的代码中，我们设置的窗口为 5 秒，5 秒结束后，窗口计算会被触发，生成第一个计算结果。`allowedLateness()` 设置窗口结束后还要等待长为 lateness 的时间，某个迟到元素的 Event Time 大于窗口结束时间但是小于窗口结束时间 +lateness，该元素仍然会被加入到该窗口中。每新到一个迟到数据，迟到数据被加入 `ProcessWindowFunction` 的缓存中，窗口的 Trigger 会触发一次 FIRE，窗口函数被重新调用一次，计算结果得到一次更新。
 

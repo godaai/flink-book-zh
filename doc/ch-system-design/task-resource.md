@@ -1,26 +1,21 @@
 (task-resource)=
 # 任务执行与资源划分
 
-:::{note}
-
+:::note
 本教程已出版为《Flink 原理与实践》，感兴趣的读者请在各大电商平台购买！
 
 <a href="https://item.jd.com/13154364.html"> ![](https://img.shields.io/badge/JD-%E8%B4%AD%E4%B9%B0%E9%93%BE%E6%8E%A5-red) </a>
-
-
 :::
 
 ## 再谈逻辑视图到物理执行图
 
-了解了 Flink 的分布式架构和核心组件，这里我们从更细粒度上来介绍从逻辑视图转化为物理执行图过程，该过程可以分成四层：`StreamGraph` -> `JobGraph` -> `ExecutionGraph` -> 物理执行图。我们根据 {numref}`fig-data-flow-graph` 来大致了解一些这些图的功能。
+了解了 Flink 的分布式架构和核心组件，这里我们从更细粒度上来介绍从逻辑视图转化为物理执行图过程，该过程可以分成五层：`StreamGraph` -> `JobGraph` -> `SchedulerGraph` -> `ExecutionGraph` -> 物理执行图。我们根据 {numref}`fig-data-flow-graph` 来大致了解这些图的功能。
 
-* `StreamGraph`：根据用户编写的代码生成的最初的图，用来表示一个 Flink 流处理作业的拓扑结构。在 `StreamGraph` 中，节点 `StreamNode` 就是算子。 
-
-* `JobGraph`：`JobGraph` 是提交给 JobManager 的数据结构。`StreamGraph` 经过优化后生成了 `JobGraph`，主要的优化为，将多个符合条件的节点链接在一起作为一个 `JobVertex` 节点，这样可以减少数据交换所需要的传输开销。这个链接的过程叫做算子链（Operator Chain），我们会在下一小节继续介绍算子链。`JobVertex` 经过算子链后，会包含一到多个算子，它的输出是 `IntermediateDataSet`，这是经过算子处理产生的数据集。
-
-* `ExecutionGraph`：JobManager 将 `JobGraph` 转化为 `ExecutionGraph`。`ExecutionGraph` 是 `JobGraph` 的并行化版本：假如某个 `JobVertex` 的并行度是 2，那么它将被划分为 2 个 `ExecutionVertex`，`ExecutionVertex` 表示一个算子子任务，它监控着单个子任务的执行情况。每个 `ExecutionVertex` 会输出一个 `IntermediateResultPartition`，这是单个子任务的输出，再经过 `ExecutionEdge` 输出到下游节点。`ExecutionJobVertex` 是这些并行子任务的合集，它监控着整个算子的运行情况。`ExecutionGraph` 是调度层非常核心的数据结构。
-
-* 物理执行图：JobManager 根据 `ExecutionGraph` 对作业进行调度后，在各个 TaskManager 上部署具体的任务，物理执行图并不是一个具体的数据结构。
+* `StreamGraph`：根据用户编写的代码生成的最初的图，用来表示一个 Flink 流处理作业的拓扑结构。在 `StreamGraph` 中，节点 `StreamNode` 就是算子。
+* `JobGraph`：`JobGraph` 是提交给 JobManager 的数据结构。`StreamGraph` 经过优化后生成了 `JobGraph`，主要优化为算子链，将多个算子合并成一个 `JobVertex`，减少网络传输开销。算子链逻辑由 `StreamingJobGraphGenerator.isChainable` 方法控制。`JobVertex` 的输出由 `IntermediateResult` 表示，这是算子处理后产生的数据集。
+* `SchedulerGraph`：表达调度策略，将 `JobVertex` 转换为带有 slot 要求和本地化偏好的调度单元。
+* `ExecutionGraph`：JobManager 将 `SchedulerGraph` 转化为并行化的 `ExecutionGraph`。并行度分解、`ExecutionVertex` 与 `ExecutionEdge` 的概念不变，但对 Checkpoint 协调和任务恢复做了更细粒度的优化。
+* 物理执行图：调度器根据 `ExecutionGraph` 在各 TaskManager 上部署任务，物理执行图本质上不作为显式数据结构存在。
 
 ```{figure} ./img/graph.svg
 ---
@@ -31,11 +26,11 @@ align: center
 数据流图的转化过程
 ```
 
-可以看到，Flink 在数据流图上可谓煞费苦心，仅各类图就有四种之多。对于新人来说，可以不用太关心这些非常细节的底层实现，只需要了解以下几个核心概念：
+可以看到，Flink 在数据流图上可谓煞费苦心，引入了五层结构。对于初学者，只需掌握以下几个核心概念即可：
 
-* Flink 采用主从架构，Master 起着管理协调作用，TaskManager 负责物理执行，在执行过程中会发生一些数据交换、生命周期管理等事情。
+* Flink 采用主从架构，JobManager（Master）负责管理协调，TaskManager 负责物理执行和 Slot 管理。
 
-* 用户调用 Flink API，构造逻辑视图，Flink 会对逻辑视图优化，并转化为并行化的物理执行图，最后被执行的是物理执行图。
+用户调用 Flink API 构造逻辑视图，Flink 会依次生成 StreamGraph、JobGraph、SchedulerGraph、ExecutionGraph，最后在 TaskManager 上执行物理任务。
 
 ## 任务、算子子任务与算子链
 
@@ -60,14 +55,12 @@ align: center
 
 ### Task Slot
 
-根据前文的介绍，我们已经了解到 TaskManager 负责具体的任务执行。在程序执行之前，经过优化，部分子任务被链接在一起，组成一个 Task。TaskManager 是一个 JVM 进程，在 TaskManager 中可以并行运行一到多个 Task。每个 Task 是一个线程，需要 TaskManager 为其分配相应的资源，TaskManager 使用 Task Slot 给 Task 分配资源。
-
 在解释 Flink 的 Task Slot 的概念前，我们先回顾一下进程与线程的概念。在操作系统层面，进程（Process）是进行资源分配和调度的一个独立单位，线程（Thread）是 CPU 调度的基本单位。比如，我们常用的 Office Word 软件，在启动后就占用操作系统的一个进程。Windows 上可以使用任务管理器来查看当前活跃的进程，Linux 上可以使用 `top` 命令来查看。线程是进程的一个子集，一个线程一般专注于处理一些特定任务，不独立拥有系统资源，只拥有一些运行中必要的资源，如程序计数器。一个进程至少有一个线程，也可以有多个线程。多线程场景下，每个线程都处理一小个任务，多个线程以高并发的方式同时处理多个小任务，可以提高处理能力。
 
-回到 Flink 的槽位分配机制上，一个 TaskManager 是一个进程，TaskManager 可以管理一至多个 Task，每个 Task 是一个线程，占用一个 Slot。每个 Slot 的资源是整个 TaskManager 资源的子集，比如 {numref}`fig-task-slot` 里的 TaskManager 下有 3 个 Slot，每个 Slot 占用 TaskManager 1/3 的内存，第一个 Slot 中的 Task 不会与第二个 Slot 中的 Task 互相争抢内存资源。
+回到 Flink 的槽位分配机制上，一个 TaskManager 是一个进程，TaskManager 可以管理一至多个 Task，每个 Task 是一个线程，占用一个 Slot。在 Flink 1.20 及之后的版本中，TaskManager 的资源分配机制更加灵活和精确，支持更细粒度的资源控制。每个 Slot 的资源是整个 TaskManager 资源的子集，Flink 会根据任务的实际需求动态调整每个 Slot 的资源配额。
 
 :::{note}
-在分配资源时，Flink 并没有将 CPU 资源明确分配给各个槽位。
+在 Flink 1.20 及之后版本中，资源分配机制更加智能，可以根据任务的实际需求动态调整资源配额，而不仅仅是简单地平均分配。
 :::
 
 ```{figure} ./img/task-slot.svg
@@ -81,7 +74,7 @@ Task Slot 与 Task Manager
 
 假设我们给 WordCount 程序分配两个 TaskManager，每个 TaskManager 又分配 3 个槽位，所以共有 6 个槽位。结合之前图中对这个作业的并行度设置，整个作业被划分为 5 个 Task，使用 5 个线程，这 5 个线程可以按照上图所示的方式分配到 6 个槽位中。
 
-Flink 允许用户设置 TaskManager 中槽位的数目，这样用户就可以确定以怎样的粒度将任务做相互隔离。如果每个 TaskManager 只包含一个槽位，那么运行在该槽位内的任务将独享 JVM。如果 TaskManager 包含多个槽位，那么多个槽位内的任务可以共享 JVM 资源，比如共享 TCP 连接、心跳信息、部分数据结构等。官方建议将槽位数目设置为 TaskManager 下可用的 CPU 核心数，那么平均下来，每个槽位都能平均获得 1 个 CPU 核心。
+Flink 允许用户设置 TaskManager 中槽位的数目，这样用户就可以确定以怎样的粒度将任务做相互隔离。如果每个 TaskManager 只包含一个槽位，那么运行在该槽位内的任务将独享 JVM。如果 TaskManager 包含多个槽位，那么多个槽位内的任务可以共享 JVM 资源，比如共享 TCP 连接、心跳信息、部分数据结构等。在 Flink 1.20 及之后版本中，建议根据实际任务负载动态调整槽位数目，而不是简单地设置为 CPU 核心数。官方建议将槽位数目设置为 TaskManager 下可用的 CPU 核心数，那么平均下来，每个槽位都能平均获得 1 个 CPU 核心。
 
 ### 槽位共享
 
@@ -109,6 +102,6 @@ align: center
 
 最初图中的方式共占用 5 个槽位，支持槽位共享后，{numref}`fig-slot-sharing` 只占用 2 个槽位。为了充分利用空槽位，剩余的 4 个空槽位可以分配给别的作业，也可以通过修改并行度来分配给这个作业。例如，这个作业的输入数据量非常大，我们可以把并行度设为 6，更多的算子实例会将这些槽位填充，如 {numref}`fig-slot-parallelism` 所示。
 
-综上，Flink 的一个槽位中可能运行一个算子子任务、也可以是被链接的多个子任务组成的 Task，或者是共享槽位的多个 Task，具体这个槽位上运行哪些计算由算子链和槽位共享两个优化措施决定。我们将在 9.3 节再次讨论算子链和槽位共享这两个优化选项。
+综上，Flink 的一个槽位中可能运行一个算子子任务、也可以是被链接的多个子任务组成的 Task，或者是共享槽位的多个 Task。在 Flink 2.0 中，槽位共享机制得到了进一步优化，支持更智能的任务调度和资源分配策略。具体这个槽位上运行哪些计算由算子链和槽位共享两个优化措施决定。我们将在 9.3 节再次讨论算子链和槽位共享这两个优化选项。
 
-并行度和槽位数目的概念可能容易让人混淆，这里再次阐明一下。用户使用 Flink 提供的 API 算子可以构建一个逻辑视图，需要将任务并行才能被物理执行。一个算子将被切分为多个子任务，每个子任务处理整个作业输入数据的一部分。如果输入数据过大，增大并行度可以让算子切分为更多的子任务，加快数据处理速度。可见，并行度是 Flink 对任务并行切分的一种描述。槽位数目是在资源设置时，对单个 TaskManager 的资源切分粒度。关于并行度、槽位数目等配置，将在 9.2.2 中详细说明。 
+并行度和槽位数目的概念可能容易让人混淆，这里再次阐明一下。用户使用 Flink 提供的 API 算子可以构建一个逻辑视图，需要将任务并行才能被物理执行。一个算子将被切分为多个子任务，每个子任务处理整个作业输入数据的一部分。如果输入数据过大，增大并行度可以让算子切分为更多的子任务，加快数据处理速度。可见，并行度是 Flink 对任务并行切分的一种描述。槽位数目是在资源设置时，对单个 TaskManager 的资源切分粒度。在 Flink 1.20 及之后版本中，建议根据实际任务负载动态调整槽位数目，而不是简单地设置为 CPU 核心数。关于并行度、槽位数目等配置，将在 9.2.2 中详细说明。 

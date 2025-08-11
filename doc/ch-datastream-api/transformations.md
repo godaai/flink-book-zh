@@ -550,7 +550,7 @@ public static class MyCoMapFunction implements CoMapFunction<Integer, String, St
 }
 ```
 
-两个数据流 `connect` 之后，可以使用 `FlatMapFunction` 也可以使用 `ProcessFunction` 继续处理，可以做到类似 SQL 中的连接（Join）的效果，我们将在 [ProcessFunction](../chapter-time-window/process-function.md#process-on-two-streams) 部分讲解如何对两个数据流使用 `connect` 实现 Join 效果。Flink 也提供了 `join` 算子，`join` 主要作用在时间窗口上，`connect` 相比而言更广义一些，关于 `join` 的介绍将在第五章时间相关章节中介绍。
+两个数据流 `connect` 之后，可以使用 `FlatMapFunction` 也可以使用 `ProcessFunction` 继续处理，可以做到类似 SQL 中的连接（Join）的效果，我们将在 [ProcessFunction](../ch-time-window/process-function.md#process-on-two-streams) 部分讲解如何对两个数据流使用 `connect` 实现 Join 效果。Flink 也提供了 `join` 算子，`join` 主要作用在时间窗口上，`connect` 相比而言更广义一些，关于 `join` 的介绍将在第五章时间相关章节中介绍。
 
 ## 并行度与数据重分布
 

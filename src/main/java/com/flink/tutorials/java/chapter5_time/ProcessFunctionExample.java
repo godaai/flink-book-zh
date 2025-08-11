@@ -1,13 +1,14 @@
 package com.flink.tutorials.java.chapter5_time;
 
 import com.flink.tutorials.java.utils.stock.StockPrice;
-import com.flink.tutorials.java.utils.stock.StockSource;
+import com.flink.tutorials.java.utils.stock.StockReaderFormat;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.Types;
-import org.apache.flink.configuration.Configuration;
-import org.apache.flink.streaming.api.TimeCharacteristic;
+import org.apache.flink.connector.file.src.FileSource;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -23,19 +24,20 @@ public class ProcessFunctionExample {
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
-        // 使用EventTime时间语义
-        env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
-
         env.setParallelism(1);
 
         // 读入数据流
-        DataStream<StockPrice> inputStream = env
-                .addSource(new StockSource("stock/stock-tick-20200108.csv"))
-                .assignTimestampsAndWatermarks(
-                        WatermarkStrategy
-                                .<StockPrice>forMonotonousTimestamps()
-                                .withTimestampAssigner((event, timestamp) -> event.ts)
-                );
+        String filePath = ClassLoader.getSystemResource("stock/stock-tick-20200108.csv")
+                .getPath();
+        FileSource<StockPrice> source = FileSource
+                .forRecordStreamFormat(new StockReaderFormat(), new Path(filePath))
+                .build();
+        DataStream<StockPrice> inputStream = env.fromSource(
+                source,
+                WatermarkStrategy.<StockPrice>forMonotonousTimestamps()
+                        .withTimestampAssigner((event, timestamp) -> event.ts),
+                "StockPrice Source"
+        );
 
         DataStream<String> warnings = inputStream
                 .keyBy(stock -> stock.symbol)
@@ -44,10 +46,11 @@ public class ProcessFunctionExample {
 
         warnings.print();
 
-        OutputTag<StockPrice> outputTag = new OutputTag<StockPrice>("high-volume-trade") {};
+        OutputTag<StockPrice> outputTag = new OutputTag<>("high-volume-trade") {
+        };
 
-        SingleOutputStreamOperator<StockPrice> mainDataStream = (SingleOutputStreamOperator)inputStream;
-        DataStream<StockPrice>sideOutputStream = mainDataStream.getSideOutput(outputTag);
+        SingleOutputStreamOperator<StockPrice> mainDataStream = (SingleOutputStreamOperator) inputStream;
+        DataStream<StockPrice> sideOutputStream = mainDataStream.getSideOutput(outputTag);
 
 //        sideOutputStream.print();
 
@@ -58,7 +61,7 @@ public class ProcessFunctionExample {
     public static class IncreaseAlertFunction
             extends KeyedProcessFunction<String, StockPrice, String> {
 
-        private long intervalMills;
+        private final long intervalMills;
         // 状态句柄
         private ValueState<Double> lastPrice;
         private ValueState<Long> currentTimer;
@@ -68,12 +71,12 @@ public class ProcessFunctionExample {
         }
 
         @Override
-        public void open(Configuration parameters) throws Exception {
+        public void open(OpenContext openContext) throws Exception {
             // 从RuntimeContext中获取状态
             lastPrice = getRuntimeContext().getState(
-                    new ValueStateDescriptor<Double>("lastPrice", Types.DOUBLE));
+                    new ValueStateDescriptor<>("lastPrice", Types.DOUBLE));
             currentTimer = getRuntimeContext().getState(
-                    new ValueStateDescriptor<Long>("timer", Types.LONG));
+                    new ValueStateDescriptor<>("timer", Types.LONG));
         }
 
         @Override
@@ -114,7 +117,7 @@ public class ProcessFunctionExample {
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 
             out.collect(formatter.format(ts) + ", symbol: " + ctx.getCurrentKey() +
-                    " monotonically increased for " + intervalMills + " millisecond.");
+                    " monotonically increased for " + intervalMills + " millisecond. Current price: " + lastPrice.value());
             // 清空currentTimer状态
             currentTimer.clear();
         }

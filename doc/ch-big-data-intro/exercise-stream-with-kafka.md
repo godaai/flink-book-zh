@@ -1,5 +1,5 @@
 (exercise-stream-with-kafka)=
-# 案例：使用 Kafka 构建文本数据流
+# 案例实战：使用 Kafka 构建文本数据流
 
 尽管本书主题是 Flink，但是对数据流的整个生命周期有一个更全面的认识有助于我们理解大数据和流处理。{numref}`technologies` 简单介绍了 Kafka 这项技术，本节将介绍如何使用 Kafka 构建实时文本数据流，读者可以通过本节了解数据流管道的大致结构：数据生产者源源不断地生成数据流，数据流通过消息队列投递，数据消费者异步地对数据流进行处理。
 
@@ -39,8 +39,8 @@ Kafka 涉及不少概念，包括 Topic、Producer、Consumer 等，这里从 Fl
 从 Kafka 官网下载二进制文件形式的软件包，软件包扩展名为 .tgz。Windows 用户可以使用 7Zip 或 WinRAR 软件解压 .tgz 文件，Linux 和 macOS 用户需要使用命令行工具，进入该下载目录。
 
 ```bash
-$ tar -xzf kafka_2.12-2.3.0.tgz
-$ cd kafka_2.12-2.3.0
+$ tar -xzf kafka_2.13-4.0.0.tgz
+$ cd kafka_2.13-4.0.0
 ```
 
 :::{note}
@@ -76,6 +76,13 @@ $ bin/kafka-server-start.sh config/server.properties
 ```bash
 $ bin/kafka-topics.sh --create --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic Shakespeare
 ```
+
+:::{note}
+
+- 在生产环境中，建议将 `replication-factor` 设置为 3 以提高数据可靠性。
+- 如果需要处理大量数据，可以适当增加 `partitions` 数量以提高并行处理能力。
+
+:::
 
 也可以使用命令查看已有的 Topic：
 

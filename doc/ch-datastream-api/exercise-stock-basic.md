@@ -1,5 +1,5 @@
 (exercise-stock-basic)= 
-# 案例实战：股票数据流处理
+# 习题 股票数据流处理
 
 :::{note}
 
@@ -38,62 +38,73 @@ US2.AAPL,20200108,093003,297.310000000,100
  */
 ```
 
-接下来，我们自定义 Source，这个自定义的类继承 `SourceFunction`，读取数据集中的元素，并将数据写入 `DataStream<StockPrice>` 中。为了模拟不同交易之间的时间间隔，我们使用 `Thread.sleep()` 方法，等待一定的时间。下面的代码展示了如何自定义 Source，读者可以直接拿来借鉴。
+接下来，我们利用 File Source，读取数据集中的元素，并将数据写入 `DataStream<StockPrice>` 中。为了模拟不同交易之间的时间间隔，我们使用 `Thread.sleep()` 方法，等待一定的时间。
 
 ```java
-public class StockSource implements SourceFunction<StockPrice> {
+// 利用 FileSource 读取数据集， filePath 是数据集的路径， StockReaderFormat 是自定义的 RecordStreamFormat
+FileSource<StockPrice> source = FileSource
+        .forRecordStreamFormat(new StockReaderFormat(), new Path(filePath))
+        .build();
+// 不同交易之间的时间间隔为数据中的时间
+DataStream<StockPrice> stockStream = env.fromSource(source, WatermarkStrategy.
+        <StockPrice>forBoundedOutOfOrderness(Duration.ofSeconds(5))
+        .withTimestampAssigner((event, timestamp) -> event.ts), "StockSource");
+```
+下面的代码展示了如何自定义 `StockReaderFormat` ，读者可以直接拿来借鉴。
+```java
+public class StockReaderFormat extends SimpleStreamFormat<StockPrice> {
+    private static final long serialVersionUID = 1L;
 
-    // Source 是否正在运行
-    private boolean isRunning = true;
-    // 数据集文件名
-    private String path;
-    private InputStream streamSource;
-
-    public StockSource(String path) {
-        this.path = path;
-    }
-
-    // 读取数据集中的元素，每隔时间发送一次股票数据
-  	// 使用 SourceContext.collect(T element) 发送数据
     @Override
-    public void run(SourceContext<StockPrice> sourceContext) throws Exception {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd HHmmss");
-        // 从项目的 resources 目录获取输入
-        streamSource = this.getClass().getClassLoader().getResourceAsStream(path);
-        BufferedReader br = new BufferedReader(new InputStreamReader(streamSource));
-        String line;
-        boolean isFirstLine = true;
-        long timeDiff = 0;
-        long lastEventTs = 0;
-        while (isRunning && (line = br.readLine()) != null) {
-            String[] itemStrArr = line.split(",");
-            LocalDateTime dateTime = LocalDateTime.parse(itemStrArr[1] + " " + itemStrArr[2], formatter);
-            long eventTs = Timestamp.valueOf(dateTime).getTime();
-            if (isFirstLine) {
-                // 从第一行数据提取时间戳
-                lastEventTs = eventTs;
-                isFirstLine = false;
+    public Reader<StockPrice> createReader(Configuration config, FSDataInputStream stream) {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+        return new Reader<>() {
+            @Override
+            public StockPrice read() throws IOException {
+                String line = reader.readLine();
+                if (line == null) {
+                    return null;
+                }
+
+                String[] fields = line.split(",");
+                if (fields.length < 5) {
+                    System.err.println("Invalid line: " + line + " (expected at least 5 fields)");
+                    return read(); // 跳过无效行，继续读取下一行
+                }
+
+                try {
+                    String symbol = fields[0];
+                    String date = fields[1];
+                    String time = fields[2];
+                    double price = Double.parseDouble(fields[3]);
+                    int volume = Integer.parseInt(fields[4]);
+
+                    long ts = parseDateTime(date, time);
+                    String mediaStatus = "";
+
+                    return new StockPrice(symbol, price, ts, volume, mediaStatus);
+                } catch (NumberFormatException | ParseException e) {
+                    System.err.println("Failed to parse line: " + line + " - " + e.getMessage());
+                    return read(); // 解析失败时继续读取下一行
+                }
             }
-            StockPrice stock = StockPrice.of(itemStrArr[0], Double.parseDouble(itemStrArr[3]), eventTs, Integer.parseInt(itemStrArr[4]));
-            // 输入文件中的时间戳是从小到大排列的
-            // 新读入的行如果比上一行大，sleep，这样来模拟一个有时间间隔的输入流
-            timeDiff = eventTs - lastEventTs;
-            if (timeDiff > 0)
-                Thread.sleep(timeDiff);
-            sourceContext.collect(stock);
-            lastEventTs = eventTs;
-        }
+
+            @Override
+            public void close() throws IOException {
+                reader.close();
+            }
+        };
     }
 
-    // 停止发送数据
+    private long parseDateTime(String date, String time) throws ParseException {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd HHmmss");
+        Date dt = sdf.parse(date + " " + time);
+        return dt.getTime();
+    }
+
     @Override
-    public void cancel() {
-        try {
-            streamSource.close();
-        } catch (Exception e) {
-            System.out.println(e.toString());
-        }
-        isRunning = false;
+    public TypeInformation<StockPrice> getProducedType() {
+        return TypeInformation.of(StockPrice.class);
     }
 }
 ```
@@ -101,8 +112,16 @@ public class StockSource implements SourceFunction<StockPrice> {
 对于我们自定义的这个 Source，我们可以使用下面的时间语义：
 
 ```java
-env.setStreamTimeCharacteristic(TimeCharacteristic.ProcessingTime)
+WatermarkStrategy<StockPrice> watermarkStrategy = WatermarkStrategy
+    .<StockPrice>forBoundedOutOfOrderness(Duration.ofSeconds(5))
+    .withTimestampAssigner((event, timestamp) -> event.ts);
 ```
+
+这个WatermarkStrategy的含义是：
+1. 使用`forBoundedOutOfOrderness`来处理乱序数据，允许最多5秒的乱序
+2. 使用`withTimestampAssigner`来指定时间戳提取器，从StockPrice对象的ts字段获取事件时间
+
+这样设置后，Flink就能正确处理事件时间语义，支持基于事件时间的窗口操作和时间相关计算。
 
 接下来，基于 DataStream API，按照股票代号分组，对股票数据流进行分析和处理。
 

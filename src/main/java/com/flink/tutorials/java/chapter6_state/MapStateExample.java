@@ -1,15 +1,16 @@
 package com.flink.tutorials.java.chapter6_state;
 
 import com.flink.tutorials.java.utils.taobao.UserBehavior;
-import com.flink.tutorials.java.utils.taobao.UserBehaviorSource;
+import com.flink.tutorials.java.utils.taobao.UserBehaviorReaderFormat;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.configuration.Configuration;
-import org.apache.flink.streaming.api.TimeCharacteristic;
+import org.apache.flink.connector.file.src.FileSource;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -20,24 +21,28 @@ public class MapStateExample {
     public static void main(String[] args) throws Exception {
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+
         // 如果使用Checkpoint，可以开启下面三行，Checkpoint将写入HDFS
 //        env.enableCheckpointing(2000L);
 //        StateBackend stateBackend = new RocksDBStateBackend("hdfs:///flink-ckp");
 //        env.setStateBackend(stateBackend);
 
-        DataStream<UserBehavior> userBehaviorStream = env.addSource(new UserBehaviorSource("taobao/UserBehavior-20171201.csv"))
-                .assignTimestampsAndWatermarks(
-                        WatermarkStrategy
-                                .<UserBehavior>forMonotonousTimestamps()
-                                .withTimestampAssigner((event, timestamp) -> event.timestamp * 1000)
-                );
+        String filePath = ClassLoader.getSystemResource("taobao/UserBehavior-20171201.csv")
+                .getPath();
+        FileSource<UserBehavior> source = FileSource
+                .forRecordStreamFormat(new UserBehaviorReaderFormat(), new Path(filePath))
+                .build();
+        DataStream<UserBehavior> userBehaviorStream = env.fromSource(source,
+                WatermarkStrategy
+                        .<UserBehavior>forMonotonousTimestamps()
+                        .withTimestampAssigner((event, timestamp) -> event.timestamp * 1000), "BehaviorSource"
+        );
 
         // 生成一个KeyedStream
-        KeyedStream<UserBehavior, Long> keyedStream =  userBehaviorStream.keyBy(user -> user.userId);
+        KeyedStream<UserBehavior, Long> keyedStream = userBehaviorStream.keyBy(user -> user.userId);
 
         // 在KeyedStream上进行flatMap()
-        DataStream<Tuple3<Long, String, Integer>> behaviorCountStream= keyedStream.flatMap(new MapStateFunction());
+        DataStream<Tuple3<Long, String, Integer>> behaviorCountStream = keyedStream.flatMap(new MapStateFunction());
 
         behaviorCountStream.print();
 
@@ -50,7 +55,7 @@ public class MapStateExample {
         private MapState<String, Integer> behaviorMapState;
 
         @Override
-        public void open(Configuration configuration) {
+        public void open(OpenContext openContext) {
             // 创建StateDescriptor
             MapStateDescriptor<String, Integer> behaviorMapStateDescriptor = new MapStateDescriptor<String, Integer>("behaviorMap", Types.STRING, Types.INT);
             // 通过StateDescriptor获取运行时上下文中的状态

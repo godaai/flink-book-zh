@@ -18,7 +18,7 @@ public class MapExample {
         StreamExecutionEnvironment senv = StreamExecutionEnvironment.getExecutionEnvironment();
 
 
-        DataStream<Integer> dataStream = senv.fromElements(1, 2, -3, 0, 5, -9, 8);
+        DataStream<Integer> dataStream = senv.fromData(1, 2, -3, 0, 5, -9, 8);
 
         // lambda function
         // 使用Lambda表达式

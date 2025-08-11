@@ -11,7 +11,7 @@ public class TupleExample {
 
         StreamExecutionEnvironment senv = StreamExecutionEnvironment.getExecutionEnvironment();
 
-        DataStream<Tuple3<String, Long, Double>> dataStream = senv.fromElements(
+        DataStream<Tuple3<String, Long, Double>> dataStream = senv.fromData(
                 Tuple3.of("0001", 0L, 121.2),
                 Tuple3.of("0002" ,1L, 201.8),
                 Tuple3.of("0003", 2L, 10.3),

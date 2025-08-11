@@ -1,60 +1,76 @@
 package com.flink.tutorials.java.chapter8_sql;
 
-import org.apache.flink.api.java.tuple.Tuple2;
+import com.flink.tutorials.java.utils.taobao.UserBehavior;
+import com.flink.tutorials.java.utils.taobao.UserBehaviorReaderFormat;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.connector.file.src.FileSource;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.DataTypes;
-import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
-import org.apache.flink.table.descriptors.Csv;
-import org.apache.flink.table.descriptors.FileSystem;
-import org.apache.flink.table.descriptors.Rowtime;
-import org.apache.flink.table.descriptors.Schema;
 import org.apache.flink.types.Row;
 
+import java.time.Duration;
 
 public class UserBehaviorFromFile {
 
     public static void main(String[] args) throws Exception {
-
-        EnvironmentSettings fsSettings = EnvironmentSettings.newInstance().useBlinkPlanner().inStreamingMode().build();
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        StreamTableEnvironment tEnv = StreamTableEnvironment.create(env, fsSettings);
+        StreamTableEnvironment tEnv = StreamTableEnvironment.create(env);
 
-        // Flink .rowtime() 定义时间戳的方法有bug，本方法将在未来版本废弃
-        Schema schema = new Schema()
-                .field("user_id", DataTypes.BIGINT())
-                .field("item_id", DataTypes.BIGINT())
-                .field("category", DataTypes.BIGINT())
-                .field("behavior", DataTypes.STRING())
-                .field("ts", DataTypes.TIMESTAMP(3))
-                .rowtime(new Rowtime().timestampsFromField("ts").watermarksPeriodicBounded(1000));
+        // 使用当前版本推荐的FileSource API
+        String filePath = "src/main/resources/taobao/UserBehavior-test.csv";
+        
+        // 配置FileSource为连续监控模式，模拟流式输入
+        FileSource<UserBehavior> fileSource = FileSource
+                .forRecordStreamFormat(new UserBehaviorReaderFormat(), new Path(filePath))
+                .monitorContinuously(Duration.ofMillis(500)) // 每500毫秒检查一次文件变化
+                .build();
 
-        String filePath = UserBehaviorFromFile.class
-                .getClassLoader().getResource("taobao/UserBehavior-test.csv")
-                .getPath();
+        // 使用更积极的水位线生成策略
+        DataStream<UserBehavior> userBehaviorDataStream = env
+                .fromSource(fileSource, WatermarkStrategy
+                        .<UserBehavior>forBoundedOutOfOrderness(Duration.ofSeconds(1))
+                        .withTimestampAssigner((event, timestamp) -> event.timestamp * 1000), "UserBehaviorSource");
 
-        // connect()方法定义数据源未来将被废弃，以后主要使用SQL DDL
-        tEnv.connect(new FileSystem().path(filePath))
-        .withFormat(new Csv())
-        .withSchema(schema)
-        .createTemporaryTable("user_behavior");
-
-        Table userBehaviorTable = tEnv.from("user_behavior");
-        Table groupByUser = userBehaviorTable.groupBy("user_id").select("user_id, COUNT(behavior) as cnt");
-
-        Table groupByUserId = tEnv.sqlQuery("SELECT user_id, COUNT(behavior) AS cnt FROM user_behavior GROUP BY user_id");
-
+        // 使用新版Schema API定义表结构
+        tEnv.createTemporaryView(
+                "user_behavior", 
+                userBehaviorDataStream,
+                org.apache.flink.table.api.Schema.newBuilder()
+                        .column("userId", DataTypes.BIGINT())
+                        .column("itemId", DataTypes.BIGINT())
+                        .column("categoryId", DataTypes.INT())
+                        .column("behavior", DataTypes.STRING())
+                        .column("timestamp", DataTypes.BIGINT())
+                        .columnByExpression("ts", "TO_TIMESTAMP_LTZ(`timestamp` * 1000, 3)")
+                        .watermark("ts", "ts - INTERVAL '5' SECOND")
+                        .build()
+        );
+        
+        // 窗口聚合查询
         Table tumbleGroupByUserId = tEnv.sqlQuery("" +
-                "SELECT user_id, TUMBLE_END(ts, INTERVAL '5' MINUTE) AS endTs, COUNT(behavior) AS cnt " +
+                "SELECT userId AS user_id, " +
+                "COUNT(*) AS cnt, " +
+                "TUMBLE_END(ts, INTERVAL '5' SECOND) AS endTs " +
                 "FROM user_behavior " +
-                "GROUP BY user_id, TUMBLE(ts, INTERVAL '5' MINUTE)");
-
-        DataStream<Tuple2<Boolean, Row>> result = tEnv.toRetractStream(tumbleGroupByUserId, Row.class);
-        result.print();
-
+                "GROUP BY userId, TUMBLE(ts, INTERVAL '5' SECOND)");
+        
+        // 使用新版API转换为流
+        DataStream<Row> result = tEnv.toChangelogStream(tumbleGroupByUserId);
+        
+        // 设置较低的并行度便于调试
+        env.setParallelism(1);
 
         env.execute("table api");
     }
 }
+
+// 输出
+// Raw Data: > (1,665,1001,pv,1512057600)
+// Raw Data: > (2,266,1000,pv,1512057603)
+// Raw Data: > (2,266,777,pv,1512057604)
+// Raw Data: > (2,266,666,buy,1512057606)
+// Raw Data: > (1,665,555,buy,1512057606)

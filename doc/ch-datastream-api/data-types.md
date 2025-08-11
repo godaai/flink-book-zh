@@ -33,8 +33,9 @@ Flink 支持上图所示的几种数据类型：基础类型、数组、复合�
 
 ### 数组
 
-基础类型或其他对象类型组成的数组，如 `String[]`。
+基础类型或其他对象类型组成的数组，如 `String[]`、`Integer[]` 等。
 
+(composite-types)=
 ### 复合类型
 
 #### Scala case class
@@ -154,20 +155,20 @@ Flink 为 Java 专门准备了元组类型，比如 3 元组为 `Tuple3`，最�
 // Java Tuple Example
 public static void main(String[] args) throws Exception {
 
-  StreamExecutionEnvironment senv = StreamExecutionEnvironment.getExecutionEnvironment();
-
-  DataStream<Tuple3<String, Long, Double>> dataStream = senv.fromElements(
-    Tuple3.of("0001", 0L, 121.2),
-    Tuple3.of("0002" ,1L, 201.8),
-    Tuple3.of("0003", 2L, 10.3),
-    Tuple3.of("0004", 3L, 99.6)
-  );
-
-  dataStream.filter(item -> item.f2 > 100).print();
+    StreamExecutionEnvironment senv = StreamExecutionEnvironment.getExecutionEnvironment();
+    
+    DataStream<Tuple3<String, Long, Double>> dataStream = senv.fromElements(
+        Tuple3.of("0001", 0L, 121.2),
+        Tuple3.of("0002", 1L, 201.8),
+        Tuple3.of("0003", 2L, 10.3),
+        Tuple3.of("0004", 3L, 99.6)
+    );
+    
+    dataStream.filter(item -> item.f2 > 100).print();
 
   dataStream.filter(item -> ((Double)item.getField(2) > 100)).print();
 
-  senv.execute("java tuple");
+    senv.execute("java tuple");
 }
 ```
 

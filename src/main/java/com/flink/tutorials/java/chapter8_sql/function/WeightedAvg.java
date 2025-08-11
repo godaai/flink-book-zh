@@ -1,6 +1,7 @@
 package com.flink.tutorials.java.chapter8_sql.function;
 
-
+import org.apache.flink.table.annotation.DataTypeHint;
+import org.apache.flink.table.annotation.FunctionHint;
 import org.apache.flink.table.functions.AggregateFunction;
 
 import java.util.Iterator;
@@ -8,6 +9,13 @@ import java.util.Iterator;
 /**
  * 加权平均函数
  */
+@FunctionHint(
+    input = {
+        @DataTypeHint("BIGINT NOT NULL"),
+        @DataTypeHint("BIGINT NOT NULL")
+    },
+    output = @DataTypeHint("DOUBLE")
+)
 public class WeightedAvg extends AggregateFunction<Double, WeightedAvg.WeightedAvgAccum> {
 
     @Override
@@ -26,13 +34,13 @@ public class WeightedAvg extends AggregateFunction<Double, WeightedAvg.WeightedA
     }
 
     // 新数据到达时，更新ACC
-    public void accumulate(WeightedAvgAccum acc, long iValue, long iWeight) {
+    public void accumulate(WeightedAvgAccum acc, Long iValue, Long iWeight) {
         acc.sum += iValue * iWeight;
         acc.weight += iWeight;
     }
 
     // 用于BOUNDED OVER WINDOW，将较早的数据剔除
-    public void retract(WeightedAvgAccum acc, long iValue, long iWeight) {
+    public void retract(WeightedAvgAccum acc, Long iValue, Long iWeight) {
         acc.sum -= iValue * iWeight;
         acc.weight -= iWeight;
     }
@@ -49,8 +57,8 @@ public class WeightedAvg extends AggregateFunction<Double, WeightedAvg.WeightedA
 
     // 重置ACC
     public void resetAccumulator(WeightedAvgAccum acc) {
-        acc.weight = 0l;
-        acc.sum = 0l;
+        acc.weight = 0L;
+        acc.sum = 0L;
     }
 
     /**

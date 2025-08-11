@@ -159,20 +159,93 @@ Flink 在实现文件读取时，增加了一个专门检测文件路径的线�
 
 考虑到数据的容量比较大，在实现文件读取的过程中，Flink 会判断 `filePath` 路径下的文件能否切分。假设这个作业的并行度是 `n`，而且文件能够切分，检测线程会将读入的文件切分成 `n` 份，后续启动 `n` 个并行的文件读取实例读取这 `n` 份切分文件。
 
-#### 基于文件系统的 Sink
+#### 基于文件系统的 Source
 
-我们可以使用 `writeAsText(String path)`、`writeAsText(String path, WriteMode writeMode)` 和 `writeUsingOutputFormat(OutputFormat<T> format)` 等方法来将文件输出到文件系统。`WriteMode` 可以为 `NO_OVERWRITE` 和 `OVERWRITE`，即是否覆盖原来路径里的内容。`OutputFormat` 与 `FileInputFormat` 类似，表示目标文件的文件格式。在最新的 Flink 版本中，这几个输出到文件系统的方法被标记为 `@Deprecated`，表示未来将被弃用，主要考虑到这些方法没有参与 Flink 的 Checkpoint 过程中，无法提供 Exactly-Once 保障。这些方法适合用于本地调试。
+文件系统是大数据架构中最为重要的组件之一，用于存储和读取数据。Flink 支持多种文件系统，包括本地文件系统、Hadoop HDFS、Amazon S3、阿里云 OSS 等。Flink 通过路径中的文件系统描述符来确定使用的文件系统，例如：
 
-在生产环境中，为了保证数据的一致性，官方建议使用 `StreamingFileSink` 接口。下面这个例子展示了如何将一个文本数据流输出到一个目标路径上。这里用到的是一个非常简单的配置，包括一个文件路径和一个 `Encoder`。`Encoder` 可以将数据编码以便对数据进行序列化。
+- `file:///some/local/file` - 本地文件系统
+- `hdfs://host:port/file/path` - HDFS
+- `s3://bucket/path` - Amazon S3
+- `oss://bucket/path` - 阿里云 OSS
+
+在 Flink 2.0 中，我们建议使用新的构建器模式来创建文件系统 Source：
 
 ```java
-DataStream<Address> stream = env.addSource(...);
+// 创建文件系统 Source
+StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+FileSource<String> fileSource = FileSource
+    .forRecordStreamFormat(
+        new TextLineInputFormat(),
+        new Path(textPath)
+    )
+    .build();
+
+DataStream<String> textStream = env.fromSource(
+    fileSource,
+    WatermarkStrategy.noWatermarks(),
+    "File Source"
+);
+```
+
+这个新的构建器模式提供了以下优势：
+
+1. 更好的类型安全性
+2. 更清晰的配置方式
+3. 更好的扩展性
+4. 支持更多的文件格式
+
+Flink 提供了多种文件格式的输入格式实现：
+
+- `TextLineInputFormat` - 用于处理文本文件，按行读取
+- `AvroInputFormat` - 用于处理 Avro 格式文件
+- `OrcInputFormat` - 用于处理 ORC 格式文件
+- `ParquetInputFormat` - 用于处理 Parquet 格式文件
+
+如果需要自定义文件格式，可以通过实现 `FileSource.FileBasedInputFormat` 接口来创建新的输入格式。
+
+对于文件监控模式，Flink 2.0 提供了新的 `FileSource` 构建器来配置监控行为：
+
+```java
+FileSource<String> fileSource = FileSource
+    .forRecordStreamFormat(
+        new TextLineInputFormat(),
+        new Path(textPath)
+    )
+    .monitorContinuously(Duration.ofMillis(100))  // 每 100 毫秒检查一次
+    .build();
+
+// 或者一次性读取
+FileSource<String> fileSource = FileSource
+    .forRecordStreamFormat(
+        new TextLineInputFormat(),
+        new Path(textPath)
+    )
+    .build();
+```
+
+:::{note}
+注意：
+- `FileProcessingMode` 和 `readFile()` 方法在 Flink 2.0 中已被废弃
+- 使用新的 `FileSource` 构建器可以获得更好的性能和类型安全性
+- 如果需要处理大量文件，建议使用 `FileSource` 的并行读取功能
+:::
+
+#### 基于文件系统的 Sink
+
+在 Flink 使用 `StreamingFileSink` 接口。`StreamingFileSink` 是 Flink 2.0 中唯一推荐的文件系统输出方式，它能够提供 Exactly-Once 保障。
+
+```java
+DataStream<Address> stream = env.fromSource(...);
 
 // 使用 StreamingFileSink 将 DataStream 输出为一个文本文件
 StreamingFileSink<String> fileSink = StreamingFileSink
-  .forRowFormat(new Path("/file/base/path"), new SimpleStringEncoder<String>("UTF-8"))
-  .build();
-stream.addSink(fileSink);
+    .<String>builder()
+    .path(new Path("/file/base/path"))
+    .withRowFormat(new SimpleStringEncoder<>())
+    .build();
+
+stream.sinkTo(fileSink);
 ```
 
 `StreamingFileSink` 主要支持两类文件，一种是行式存储，一种是列式存储。我们平时见到的很多数据是行式存储的，即在文件的末尾追加新的行。列式存储在某些场景下的性能很高，它将一批数据收集起来，批量写入。行式存储和列式存储的接口如下。
@@ -198,13 +271,15 @@ static class Tuple2Encoder implements Encoder<Tuple2<String, Integer>> {
 对于列式存储，也需要一个类似的 `Encoder`，Flink 称之为 `BulkWriter`，本质上将数据序列化为列式存储所需的格式。比如我们想使用 Parquet 格式，代码如下。
 
 ```java
-DataStream<Datum> stream = ...;
+DataStream<Datum> stream = env.fromSource(...);
 
 StreamingFileSink<Datum> fileSink = StreamingFileSink
-  .forBulkFormat(new Path("/file/base/path"), ParquetAvroWriters.forReflectRecord(Datum.class))
-  .build();
+    .<Datum>builder()
+    .path(new Path("/file/base/path"))
+    .withBulkFormat(ParquetAvroWriters.forReflectRecord(Datum.class))
+    .build();
 
-stream.addSink(fileSink);
+stream.sinkTo(fileSink);
 ```
 
 考虑到大数据场景下，输出数据量会很大，而且流处理作业需要长时间执行，`StreamingFileSink` 的具体实现过程中使用了桶的概念。桶可以理解为输出路径的一个子文件夹。如果不做其他设置，Flink 按照时间来将输出数据分桶，会在输出路径下生成类似下面的文件夹结构。
@@ -237,14 +312,12 @@ StreamingFileSink<String> fileSink = StreamingFileSink
 
 ## Flink Kafka Connector
 
-在第 1 章中我们曾提到，Kafka 是一个消息队列，它可以在 Flink 的上游向 Flink 发送数据，也可以在 Flink 的下游接收 Flink 的输出。Kafka 是一个很多公司都采用的消息队列，因此非常具有代表性。
-
-Kafka 的 API 经过不断迭代，已经趋于稳定，我们接下来主要介绍基于稳定版本的 Kafka Connector。如果仍然使用较旧版本的 Kafka（0.11 或更旧的版本），可以通过官方文档来了解具体的使用方法。由于 Kafka Connector 并没有内置在 Flink 核心程序中，使用之前，我们需要在 Maven 中添加依赖。
+在 Flink 2.0 中，原有的 `FlinkKafkaProducer` V1 版本已被废弃，取而代之的是新的 Kafka connector 实现。新的 Kafka connector 提供了更好的性能和更简单的 API 设计。
 
 ```xml
 <dependency>
   <groupId>org.apache.flink</groupId>
-  <artifactId>flink-connector-kafka_${scala.binary.version}</artifactId>
+  <artifactId>flink-connector-kafka_${flink.version}</artifactId>
   <version>${flink.version}</version>
 </dependency>
 ```
@@ -255,33 +328,44 @@ Kafka 作为一个 Flink 作业的上游，可以为该作业提供数据，我�
 
 ```java
 // Kafka 参数
-Properties properties = new Properties();
-properties.setProperty("bootstrap.servers", "localhost:9092");
-properties.setProperty("group.id", "flink-group");
 String inputTopic = "Shakespeare";
 
-// Source
-FlinkKafkaConsumer<String> consumer =
-  new FlinkKafkaConsumer<String>(inputTopic, new SimpleStringSchema(), properties);
-DataStream<String> stream = env.addSource(consumer);
+KafkaSource<String> kafkaSource = KafkaSource.<String>builder()
+    .setBootstrapServers("localhost:9092")
+    .setTopics(inputTopic)
+    .setGroupId("flink-group")
+    .setStartingOffsets(OffsetsInitializer.earliest())
+    .setValueOnlyDeserializer(new SimpleStringSchema())
+    .build();
+
+// 创建 DataStream
+DataStream<String> stream = env.fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "Kafka Source");
 ```
 
-代码清单 7-8  初始化 Kafka Source Consumer
+代码清单 7-8 初始化 Kafka Source Connector
 
-代码清单 7-8 创建了一个 FlinkKafkaConsumer，它需要 3 个参数：Topic、反序列化方式和 Kafka 相关参数。Topic 是我们想读取的具体内容，是一个字符串，并且可以支持正则表达式。Kafka 中传输的是二进制数据，需要提供一个反序列化方式，将数据转化为具体的 Java 或 Scala 对象。Flink 已经提供了一些序列化实现，比如：SimpleStringSchema 按照字符串进行序列化和反序列化，JsonNodeDeserializationSchema 使用 Jackson 对 JSON 数据进行序列化和反序列化。如果数据类型比较复杂，我们需要实现 DeserializationSchema 或者 KafkaDeserializationSchema 接口。最后一个参数 Properties 是 Kafka 相关的设置，用来配置 Kafka 的 Consumer，我们需要配置 bootstrap.servers 和 group.id，其他的参数可以参考 Kafka 的文档进行配置。
+Kafka Source Connector 需要以下 3 个主要参数：
+
+1. Topic - 我们想要读取的数据主题，可以是一个具体的字符串，也可以是支持正则表达式的主题模式
+2. 反序列化器 - 用于将 Kafka 中的二进制数据转换为 Java 或 Scala 对象。Flink 提供了多种内置的反序列化器：
+   - `SimpleStringSchema`：用于字符串的序列化和反序列化
+   - `JsonNodeDeserializationSchema`：使用 Jackson 库处理 JSON 数据
+   - 如果数据结构复杂，可以自定义实现 `DeserializationSchema` 或 `KafkaDeserializationSchema` 接口
+3. Kafka 配置 - 包含 Kafka 连接所需的基本设置，如 broker 地址和 consumer group ID
+
+代码清单中的示例使用了 `SimpleStringSchema` 来处理简单的字符串数据。如果需要处理更复杂的数据格式，可以使用其他内置的反序列化器，或者实现自定义的反序列化器。Kafka 的配置参数可以参考官方文档进行详细设置。
 
 Flink Kafka Consumer 可以配置从哪个位置读取消息队列中的数据。默认情况下，从 Kafka Consumer Group 记录的 Offset 开始消费，Consumer Group 是根据 group.id 所配置的。其他配置可以参考下面的代码。
 
 ```java
-StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-
-FlinkKafkaConsumer<String> consumer = new FlinkKafkaConsumer<>(...);
-consumer.setStartFromGroupOffsets(); // 默认从 Kafka 记录中的 Offset 开始
-consumer.setStartFromEarliest();     // 从最早的数据开始
-consumer.setStartFromLatest();       // 从最近的数据开始
-consumer.setStartFromTimestamp(...); // 从某个时间戳开始
-
-DataStream<String> stream = env.addSource(consumer);
+// 使用自定义的反序列化器
+KafkaSource<String> kafkaSource = KafkaSource.<String>builder()
+    .setBootstrapServers("localhost:9092")
+    .setTopics(inputTopic)
+    .setGroupId("flink-group")
+    .setStartingOffsets(OffsetsInitializer.earliest())
+    .setDeserializer(new CustomKafkaDeserializationSchema())
+    .build();
 ```
 
 :::{note}
@@ -300,16 +384,19 @@ Kafka 作为 Flink 作业的下游，可以接收 Flink 作业的输出，这时
 ```java
 DataStream<Tuple2<String, Integer>> wordCount = ...
 
-FlinkKafkaProducer<Tuple2<String, Integer>> producer = new 
-FlinkKafkaProducer<Tuple2<String, Integer>> (
-      outputTopic,
-      new KafkaWordCountSerializationSchema(outputTopic),
-    properties,
-    FlinkKafkaProducer.Semantic.EXACTLY_ONCE);
-wordCount.addSink(producer);
+KafkaSink<Tuple2<String, Integer>> kafkaSink = KafkaSink.<Tuple2<String, Integer>>builder()
+    .setBootstrapServers("localhost:9092")
+    .setRecordSerializer(KafkaRecordSerializationSchema.builder()
+        .setTopic(outputTopic)
+        .setValueSerializationSchema(new KafkaWordCountSerializationSchema())
+        .build())
+    .setDeliverGuarantee(DeliveryGuarantee.EXACTLY_ONCE)
+    .build();
+
+wordCount.sinkTo(kafkaSink);
 ```
 
-上面的代码创建了一个 FlinkKafkaProducer，它需要 4 个参数：Topic、序列化方式、连接 Kafka 的相关参数以及选择什么样的投递保障。这些参数中，Topic 和连接的相关 Kafka 参数与前文所述的内容基本一样。
+上面的代码创建了一个 KafkaSink，它需要 4 个参数：Topic、序列化方式、连接 Kafka 的相关参数以及选择什么样的投递保障。这些参数中，Topic 和连接的相关 Kafka 参数与前文所述的内容基本一样。
 
 序列化方式与前面提到的反序列化方式相对应，它主要将 Java 或 Scala 对象转化为可在 Kafka 中传输的二进制数据。这个例子中，我们要传输的是一个 Tuple2<String, Integer>，需要提供对这个数据类型进行序列化的代码，例如代码清单 7-9 的序列化代码。
 
@@ -334,7 +421,7 @@ element.f1).getBytes(StandardCharsets.UTF_8));
 
 代码清单 7-9  将数据写到 Kafka Sink 时，需要进行序列化
 
-最后一个参数决定了 Flink Kafka Sink 以什么样的语义来保障数据写入 Kafka，它接受 FlinkKafkaProducer.Semantic 的枚举类型，有 3 种类型：NONE、AT_LEAST_ONCE 和 EXACTLY_ONCE。
+最后一个参数决定了 Flink Kafka Sink 以什么样的语义来保障数据写入 Kafka，它接受 DeliveryGuarantee 的枚举类型，有 3 种类型：NONE、AT_LEAST_ONCE 和 EXACTLY_ONCE。
 - None：不提供任何保障，数据可能会丢失也可能会重复。
 - AT_LEAST_ONCE：保证不丢失数据，但是有可能会重复。
 - EXACTLY_ONCE：基于 Kafka 提供的事务写功能，一条数据最终只写入 Kafka 一次。

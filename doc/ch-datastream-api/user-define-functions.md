@@ -17,7 +17,7 @@
 
 对于 `map`、`flatMap`、`reduce` 等方法，我们可以实现 `MapFunction`、`FlatMapFunction`、`ReduceFunction` 等 `interface` 接口。这些函数类签名中都有泛型参数，用来定义该函数的输入或输出的数据类型。我们要继承这些类，并重写里面的自定义函数。以 `flatMap` 对应的 `FlatMapFunction` 为例，它在源码中的定义为：
 
-```scala
+```java
 package org.apache.flink.api.common.functions;
 
 @FunctionalInterface

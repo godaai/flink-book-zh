@@ -78,7 +78,7 @@ StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironme
 
 ## 读取数据源
 
-接着我们需要使用执行环境提供的方法读取数据源，读取数据源的部分统称为 Source。数据源一般是消息队列或文件，我们也可以根据业务需求重写数据源，比如定时爬取网络中某处的数据。在本例中，我们使用 `DataStream<String> stream = env.addSource(consumer);` 来读取数据源，其中 `consumer` 是一个 Kafka 消费者，我们消费 Kafka 中的数据作为 Flink 的输入数据。绝大多数流处理实战场景可能都是消费其他消息队列作为 Source。
+接着我们需要使用执行环境提供的方法读取数据源，读取数据源的部分统称为 Source。数据源一般是消息队列或文件，我们也可以根据业务需求重写数据源，比如定时爬取网络中某处的数据。我们使用 `env.socketTextStream("localhost", 9000)` 方法从本地的 9000 端口读取数据流。这是 Flink 提供的一个方便的方式来从套接字读取文本流数据。绝大多数流处理实战场景可能都是消费其他消息队列作为 Source。
 
 我们将在第七章介绍如何使用各类 Source。
 

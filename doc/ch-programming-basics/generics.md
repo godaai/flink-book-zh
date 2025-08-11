@@ -22,24 +22,40 @@ List<Double> doubleList = new LinkedList<Double>();
 public class MyArrayList<T> {
 
     private int size;
-    T[] elements;
+    private int capacity;
+    private Object[] elements;
 
     public MyArrayList(int capacity) {
-        this.size = capacity;
-        this.elements = (T[]) new Object[capacity];
+        this.capacity = capacity;
+        this.elements = new Object[capacity];
     }
 
     public void set(T element, int position) {
+        if (position >= capacity) {
+            throw new IndexOutOfBoundsException("Position exceeds array capacity");
+        }
         elements[position] = element;
+    }
+
+    public T get(int position) {
+        if (position >= capacity) {
+            throw new IndexOutOfBoundsException("Position exceeds array capacity");
+        }
+        return (T) elements[position];
     }
 
     @Override
     public String toString() {
-        String result = "";
-        for (int i = 0; i < size; i++) {
-            result += elements[i].toString();
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < capacity; i++) {
+            if (elements[i] != null) {
+                result.append(elements[i].toString());
+                if (i < capacity - 1) {
+                    result.append(", ");
+                }
+            }
         }
-        return result;
+        return result.toString();
     }
 
     public static void main(String[] args){
@@ -48,11 +64,12 @@ public class MyArrayList<T> {
         strList.set("second", 1);
 
         System.out.println(strList.toString());
+        System.out.println("First element: " + strList.get(0));
     }
 }
 ```
 
-代码清单 2-3 一个名为 `MyArrayList` 的泛型类，它可以支持简单的数据写入
+代码清单 2-3 一个名为 `MyArrayList` 的泛型类，它可以支持简单的数据写入和读取
 
 当然我们也可以给这个类添加多个泛型参数，比如 `<K,V>`, `<T,E,K>` 等。泛型一般使用大写字母表示，Java 为此提供了一些大写字母使用规范，如下。
 
@@ -114,13 +131,20 @@ public class MyArrayList<T> {
     // public 关键字后的 <E> 表明该方法是一个泛型方法
     // 泛型方法中的类型 E 和泛型类中的类型 T 可以不一样
     public <E> E processElement(E element) {
-        ...
-        return E;
+        // 这里只是简单地返回传入的元素
+        // 实际应用中可能需要对元素进行处理
+        return element;
+    }
+
+    // 泛型方法也可以有多个类型参数
+    public <E, K> E processElements(E element, K key) {
+        // 处理逻辑
+        return element;
     }
 }
 ```
 
-从上面的代码可以看出，`public` 或 `private` 关键字后的 `<E>` 表示该方法一个泛型方法。泛型方法的类型 `E` 和泛型类中的类型 `T` 可以不一样。或者说，如果泛型方法是泛型类的一个成员，泛型方法既可以继续使用类的类型 `T`，也可以自己定义新的类型 `E`。
+从上面的代码可以看出，`public` 或 `private` 关键字后的 `<E>` 表明该方法一个泛型方法。泛型方法的类型 `E` 和泛型类中的类型 `T` 可以不一样。或者说，如果泛型方法是泛型类的一个成员，泛型方法既可以继续使用类的类型 `T`，也可以自己定义新的类型 `E`。
 
 ### 通配符
 
@@ -143,49 +167,8 @@ System.out.println(strListClass.equals(intListClass));
 
 虽然声明时我们分别使用了 `String` 和 `Integer`，但运行时关于泛型的信息被擦除了，我们无法区别 `strListClass` 和 `intListClass` 这两个类型。这是因为，泛型信息只存在于代码编译阶段，当程序运行到 JVM 上时，与泛型相关的信息会被擦除。类型擦除对于绝大多数应用系统开发者来说影响不太大，但是对于一些框架开发者来说，必须要注意。比如，Spark 和 Flink 的开发者都使用了一些办法来解决类型擦除问题，对于 API 调用者来说，受到的影响不大。
 
-## Scala 中的泛型
-
-对 Java 的泛型有了基本了解后，我们接着来了解一下 Scala 中的泛型。相比而言，Scala 的类型系统更复杂，这里只介绍一些简单语法，使读者能够读懂一些源码。
-
-Scala 中，泛型放在了方括号 `[]` 中。或者我们可以简单地理解为，原来 Java 的泛型类 `<T>`，现在改为 `[T]` 即可。
-
-在代码清单 2-4 中，我们创建了一个名为 `Stack` 的泛型类，并实现了两个简单的方法，类中各成员和方法都可以使用泛型 `T`。我们也定义了一个泛型方法，形如 `isStackPeekEquals[T]()`，方法中可以使用泛型 `T`。
-
-```scala
-object MyStackDemo {
-
-  // Stack 泛型类
-  class Stack[T] {
-   private var elements: List[T] = Nil
-   def push(x: T) {elements = x :: elements}
-   def peek: T = elements.head
-  }
-
-  // 泛型方法，检查两个 Stack 顶部是否相同
-  def isStackPeekEquals[T](p: Stack[T], q: Stack[T]): Boolean = {
-   p.peek == q.peek
-  }
-
-  def main(args: Array[String]): Unit = {
-    val stack = new Stack[Int]
-    stack.push(1)
-    stack.push(2)
-    println(stack.peek)
-
-    val stack2 = new Stack[Int]
-    stack2.push(2)
-    val stack3 = new Stack[Int]
-    stack3.push(3)
-    println(isStackPeekEquals(stack, stack2))
-    println(isStackPeekEquals(stack, stack3))
-  }
-}
-```
-
-代码清单 2-4 使用 Scala 实现一个简易的 `Stack` 泛型类
-
 ## 泛型小结
 
-本节简单总结了 Java 和 Scala 的泛型知识。对于初学者来说，泛型的语法有时候让人有些眼花缭乱，但其目的是接受不同的数据类型，增强代码的复用性。
+本节简单总结了 Java 的泛型知识。对于初学者来说，泛型的语法有时候让人有些眼花缭乱，但其目的是接受不同的数据类型，增强代码的复用性。
 
 泛型给开发者提供了不少便利，尤其是保证了底层代码简洁性。因为这些底层代码通常被封装为一个框架，会有各种各样的上层应用调用这些底层代码，进行特定的业务处理，每次调用都可能涉及泛型问题。包括 Spark 和 Flink 在内的很多框架都需要开发者基于泛型进行 API 调用。开发者非常有必要了解泛型的基本用法。

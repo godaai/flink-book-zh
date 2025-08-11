@@ -3,9 +3,9 @@ package com.flink.tutorials.java.chapter4_api.transformations;
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.accumulators.IntCounter;
 import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.typeinfo.Types;
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
@@ -24,7 +24,7 @@ public class FlatMapExample {
 
         StreamExecutionEnvironment senv = StreamExecutionEnvironment.getExecutionEnvironment();
 
-        DataStream<String> dataStream = senv.fromElements("Hello World", "Hello this is Flink");
+        DataStream<String> dataStream = senv.fromData("Hello World", "Hello this is Flink");
 
         // String.split() takes "Hello World" as input,
         // and return a list (["Hello", "World"]) as output.
@@ -76,7 +76,7 @@ public class FlatMapExample {
     // 使用FlatMapFunction实现过滤逻辑，只对字符串长度大于 limit 的内容进行词频统计
     public static class WordSplitFlatMap implements FlatMapFunction<String, String> {
 
-        private Integer limit;
+        private final Integer limit;
 
         public WordSplitFlatMap(Integer limit) {
             this.limit = limit;
@@ -97,18 +97,18 @@ public class FlatMapExample {
     // 添加了累加器 Accumulator
     public static class WordSplitRichFlatMap extends RichFlatMapFunction<String, String> {
 
-        private int limit;
+        private final int limit;
 
         // 创建一个累加器
-        private IntCounter numOfLines = new IntCounter(0);
+        private final IntCounter numOfLines = new IntCounter(0);
 
         public WordSplitRichFlatMap(Integer limit) {
             this.limit = limit;
         }
 
         @Override
-        public void open(Configuration parameters) throws Exception {
-            super.open(parameters);
+        public void open(OpenContext context) throws Exception {
+            super.open(context);
             // register accumulator
             // 在RuntimeContext中注册累加器
             getRuntimeContext().addAccumulator("num-of-lines", this.numOfLines);

@@ -7,9 +7,6 @@
 :columns: 3
 :class: sd-m-auto
 
-```{image} ./_static/book.jpeg
-:width: 150px
-```
 
 :::
 
@@ -22,9 +19,6 @@
 % The SVG rendering breaks latex builds for the GitHub badge, so only include in HTML
 ```{only} html
 [![](https://img.shields.io/github/stars/godaai/flink-book-zh?style=for-the-badge)](https://github.com/godaai/flink-book-zh)
-
-[![](https://img.shields.io/badge/JD-%E8%B4%AD%E4%B9%B0%E9%93%BE%E6%8E%A5-red?style=for-the-badge)](https://item.jd.com/13154364.html)
-
 ```
 
 :::
@@ -33,7 +27,21 @@
 
 ## 主要作者
 
-* 鲁蔚征，现就职于中国人民大学，CCF高性能计算专业委员会执行委员，主要研究大数据与机器学习系统。
+::::{grid}
+:class-container: text-center
+:gutter: 3
+
+:::{grid-item-card}
+:link-type: doc
+:class-header: bg-light
+
+鲁蔚征
+^^^
+
+现就职于中国人民大学，CCF高性能计算专业委员会执行委员，主要研究大数据与机器学习系统。
+:::
+
+::::
 
 ## 赞赏与支持
 
